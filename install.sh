@@ -11,69 +11,87 @@ while true; do
 done
 
 # Configure systemd-timesyncd
+echo "Configuring systemd-timesyncd..."
 sed -i "s/^#NTP=.*/NTP=0.asia.pool.ntp.org 1.asia.pool.ntp.org 2.asia.pool.ntp.org 3.asia.pool.ntp.org/" /etc/systemd/timesyncd.conf
 systemctl restart systemd-timesyncd.service
 sleep 5
 
 # Partition the disk
+echo "Partitioning the disk..."
 echo -e "label: gpt\n,1G,U\n,,L" | sfdisk -w always -W always /dev/nvme0n1
 
 # Format partitions
+echo "Formating partitions..."
 mkfs.fat -F32 /dev/nvme0n1p1
 mkfs.ext4 /dev/nvme0n1p2
 
 # Mount partitions
+echo "Mounting partitions..."
 mount /dev/nvme0n1p2 /mnt
 mount --mkdir /dev/nvme0n1p1 /mnt/boot
 
 # Update mirrorlist
+echo "Updating mirrorlist..."
 reflector --save /etc/pacman.d/mirrorlist -f 5 -c sg -p https
 
 # Install essential packages
+echo "Installing essential packages..."
 pacstrap -K /mnt base base-devel linux linux-headers linux-firmware sof-firmware intel-ucode dosfstools exfatprogs e2fsprogs networkmanager neovim man-db man-pages texinfo sudo git bash-completion
 
 # Generate fstab
+echo "Generating fstab..."
 genfstab -U /mnt >> /mnt/etc/fstab
 
-# Chroot and configure system
+# Chroot and configure the system
+echo "Chrooting and configuring the system..."
 arch-chroot /mnt /bin/bash <<EOF
 set -euo pipefail
 
-# Create swap file
+# Create a swap file
+echo "Creating a swap file..."
 mkswap -U clear -s 8G -F /swapfile
 echo "/swapfile none swap defaults 0 0" >> /etc/fstab
 
 # Set timezone and synchronize hardware clock
+echo "Setting timezone and synchronizing hardware clock..."
 ln -sf /usr/share/zoneinfo/Asia/Manila /etc/localtime
 hwclock --systohc
 
 # Configure systemd-timesyncd
+echo "Configuring systemd-timesyncd..."
 mkdir /etc/systemd/timesyncd.conf.d
 echo -e "[Time]\nNTP=0.asia.pool.ntp.org 1.asia.pool.ntp.org 2.asia.pool.ntp.org 3.asia.pool.ntp.org" > /etc/systemd/timesyncd.conf.d/ntp.conf
 systemctl enable systemd-timesyncd.service
 
 # Set locale
+echo "Setting locale..."
 sed -i "/^#en_US\\.UTF-8 UTF-8/s/^#//" /etc/locale.gen && locale-gen
 echo "LANG=en_US.UTF-8" > /etc/locale.conf
 
 # Set hostname
+echo "Setting hostname..."
 echo "archlinux" > /etc/hostname
 
 # Enable NetworkManager service
+echo "Enabling NetworkManager service..."
 systemctl enable NetworkManager.service
 
 # Set root password
+echo "Setting root password..."
 echo "$PASSWORD" | passwd -s root
 
 # Create user
+echo "Creating user..."
 useradd -m -G wheel "$USERNAME"
 echo "$PASSWORD" | passwd -s "$USERNAME"
 
 # Allow wheel group sudo access
+echo "Allowing wheel group sudo access..."
 echo "%wheel ALL=(ALL) ALL" > /etc/sudoers.d/wheel
 chmod 0440 /etc/sudoers.d/wheel
 
 # Install and configure systemd-boot
+echo "Installing and configuring systemd-boot..."
 bootctl install
 
 cat > /boot/loader/loader.conf <<LOADER
@@ -97,5 +115,8 @@ options root=/dev/nvme0n1p2 rw
 ENTRY
 EOF
 
-# Unmount /mnt
+# Unmount partitions
+echo "Unmounting partitions..."
 umount -R /mnt
+
+echo "Installation successful!"
