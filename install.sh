@@ -30,7 +30,7 @@ mount --mkdir /dev/nvme0n1p1 /mnt/boot
 reflector --save /etc/pacman.d/mirrorlist -f 5 -c sg -p https
 
 # Install essential packages
-pacstrap -K /mnt base linux linux-firmware intel-ucode networkmanager neovim man-db man-pages texinfo sudo
+pacstrap -K /mnt base base-devel linux linux-headers linux-firmware sof-firmware intel-ucode dosfstools exfatprogs e2fsprogs networkmanager neovim man-db man-pages texinfo sudo git bash-completion
 
 # Generate fstab
 genfstab -U /mnt >> /mnt/etc/fstab
