@@ -97,6 +97,5 @@ options root=/dev/nvme0n1p2 rw
 ENTRY
 EOF
 
-# Finish and reboot
+# Unmount /mnt
 umount -R /mnt
-reboot
