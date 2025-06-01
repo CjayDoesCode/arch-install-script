@@ -53,7 +53,7 @@ echo -e "[Time]\nNTP=0.asia.pool.ntp.org 1.asia.pool.ntp.org 2.asia.pool.ntp.org
 systemctl enable systemd-timesyncd.service
 
 # Set locale
-sed -i "0,/^#en_US\.UTF-8 UTF-8/ s/^#//" /etc/locale.gen && locale-gen
+sed -i "/^#en_US\\.UTF-8 UTF-8/s/^#//" /etc/locale.gen && locale-gen
 echo "LANG=en_US.UTF-8" > /etc/locale.conf
 
 # Set hostname
