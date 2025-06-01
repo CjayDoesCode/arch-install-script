@@ -13,6 +13,7 @@ done
 # Configure systemd-timesyncd
 sed -i "s/^#NTP=.*/NTP=0.asia.pool.ntp.org 1.asia.pool.ntp.org 2.asia.pool.ntp.org 3.asia.pool.ntp.org/" /etc/systemd/timesyncd.conf
 systemctl restart systemd-timesyncd.service
+sleep 5
 
 # Partition the disk
 echo -e "label: gpt\n,1G,U\n,,L" | sfdisk -w always -W always /dev/nvme0n1
