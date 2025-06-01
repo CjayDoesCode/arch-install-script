@@ -8,7 +8,7 @@
 1. Download the script:
 
 ```bash
-curl -O https://raw.githubusercontent.com/CjayDoesCode/arch-install-scripts/main/install.sh
+curl -O https://raw.githubusercontent.com/CjayDoesCode/arch-install-script/refs/heads/main/install.sh
 ```
 
 2. Make the script executable:
