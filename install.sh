@@ -41,7 +41,7 @@ set -euo pipefail
 
 # Create swap file
 mkswap -U clear -s 8G -F /swapfile
-echo '/swapfile none swap defaults 0 0' >> /etc/fstab
+echo "/swapfile none swap defaults 0 0" >> /etc/fstab
 
 # Set timezone and synchronize hardware clock
 ln -sf /usr/share/zoneinfo/Asia/Manila /etc/localtime
