@@ -13,9 +13,10 @@ REFLECTOR_ARGS="--save /etc/pacman.d/mirrorlist -f 5 -c sg -p https"
 
 KERNEL_PARAMETERS="root=${ROOT} rw quiet loglevel=3 systemd.show_status=auto rd.udev.log_level=3"
 BASE_SYSTEM_PKGS="
-    base base-devel bash-completion dosfstools e2fsprogs exfatprogs
-    git intel-ucode linux linux-firmware linux-headers man-db man-pages
-    networkmanager neovim pacman-contrib reflector sof-firmware sudo texinfo
+    base base-devel bottom dosfstools e2fsprogs exfatprogs fastfetch git gnupg intel-ucode
+    linux linux-firmware linux-headers man-db man-pages mesa networkmanager neovim openssh
+    pacman-contrib pipewire pipewire-alsa pipewire-audio pipewire-jack pipewire-pulse
+    reflector sof-firmware sudo texinfo vulkan-intel wireplumber zsh zsh-completions
 "
 BASE_SYSTEM_PKGS=$(echo "$BASE_SYSTEM_PKGS")
 INITRAMFS_HOOKS="systemd autodetect modconf kms block filesystems"
@@ -51,9 +52,9 @@ systemctl restart systemd-timesyncd.service
 echo "Waiting for system clock to synchronize..." && sleep 1
 sleep 5
 
-# Partition the disk
+# Partition disk
 
-echo "Partitioning the disk..." && sleep 1
+echo "Partitioning disk..." && sleep 1
 echo -e "label: gpt\n,1G,U\n,,L" | sfdisk -w always -W always "$DRIVE"
 
 # Format partitions
@@ -90,14 +91,20 @@ arch-chroot /mnt /bin/bash <<OUTER_EOF
 
 set -euo pipefail
 
+# Create swap file
+
+echo "Creating swap file..." && sleep 1
+mkswap -U clear -s "$SWAP_FILE_SIZE" -F /swapfile
+echo "/swapfile none swap defaults 0 0" >> /etc/fstab
+
 # Set time zone
 
 echo "Setting time zone and synchronizing hardware clock..." && sleep 1
 ln -sf "/usr/share/zoneinfo/${TIME_ZONE}" /etc/localtime
 
-# Set the hardware clock
+# Set hardware clock
 
-echo "Setting the hardware clock..." && sleep 1
+echo "Setting hardware clock..." && sleep 1
 hwclock -w
 
 # Enable systemd-timesyncd
@@ -140,17 +147,26 @@ systemctl enable NetworkManager.service
 
 echo "Configuring mkinitcpio..." && sleep 1
 echo "HOOKS=(${INITRAMFS_HOOKS})" > /etc/mkinitcpio.conf.d/hooks.conf
+
+# Regenerate initramfs image
+
+echo "Regenerating initramfs image..." && sleep 1
 mkinitcpio -P
 
-# Set root password
+# Set password of root
 
-echo "Setting root password..." && sleep 1
+echo "Setting password of root..." && sleep 1
 echo "$password" | passwd -s root
 
-# Create a user
+# Change default shell of root
 
-echo "Creating a user..." && sleep 1
-useradd -m -G wheel "$username"
+echo "Changing default shell of root..." && sleep 1
+chsh -s /usr/bin/zsh root
+
+# Create user
+
+echo "Creating user..." && sleep 1
+useradd -m -G wheel -s /usr/bin/zsh "$username"
 echo "$password" | passwd -s "$username"
 
 # Allow wheel group sudo access
@@ -187,12 +203,6 @@ linux     /vmlinuz-linux
 initrd    /initramfs-linux-fallback.img
 options   ${KERNEL_PARAMETERS}
 INNER_EOF
-
-# Create a swap file
-
-echo "Creating a swap file..." && sleep 1
-mkswap -U clear -s "$SWAP_FILE_SIZE" -F /swapfile
-echo "/swapfile none swap defaults 0 0" >> /etc/fstab
 
 # Configure reflector
 
