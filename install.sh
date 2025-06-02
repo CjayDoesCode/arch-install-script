@@ -13,7 +13,7 @@ REFLECTOR_ARGS="--save /etc/pacman.d/mirrorlist -f 5 -c sg -p https"
 
 KERNEL_PARAMETERS="root=${ROOT} rw quiet loglevel=3 systemd.show_status=auto rd.udev.log_level=3"
 BASE_SYSTEM_PKGS="
-    base base-devel bottom dosfstools e2fsprogs exfatprogs fastfetch git gnupg intel-ucode
+    base base-devel bc bottom dkms dosfstools e2fsprogs exfatprogs fastfetch git gnupg intel-ucode
     linux linux-firmware linux-headers man-db man-pages mesa networkmanager neovim openssh
     pacman-contrib pipewire pipewire-alsa pipewire-audio pipewire-jack pipewire-pulse
     reflector sof-firmware sudo texinfo vulkan-intel wireplumber zsh zsh-completions
@@ -218,6 +218,16 @@ systemctl enable reflector.timer
 
 echo "Enabling paccache.timer..." && sleep 1
 systemctl enable paccache.timer
+
+# Install RTL8822CE driver
+
+echo "Installing RTL8822CE driver..." && sleep 1
+git clone https://github.com/juanro49/rtl88x2ce-dkms.git
+cp rtl88x2ce-dkms/rtw88_blacklist.conf /etc/modprobe.d/rtw88_blacklist.conf
+mv rtl88x2ce-dkms /usr/src/rtl88x2ce-35403
+dkms add -m rtl88x2ce -v 35403
+dkms build -m rtl88x2ce -v 35403
+dkms install -m rtl88x2ce -v 35403
 
 OUTER_EOF
 
