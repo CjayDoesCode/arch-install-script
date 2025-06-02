@@ -10,7 +10,7 @@ NTP_SERVERS="0.asia.pool.ntp.org 1.asia.pool.ntp.org 2.asia.pool.ntp.org 3.asia.
 REFLECTOR_ARGS="--save /etc/pacman.d/mirrorlist -f 5 -c sg -p https"
 
 KERNEL_PARAMETERS="root=${ROOT} rw quiet loglevel=3 systemd.show_status=auto rd.udev.log_level=3"
-BASE_SYSTEM_PKGS="base base-devel linux linux-headers linux-firmware sof-firmware intel-ucode dosfstools exfatprogs e2fsprogs networkmanager neovim man-db man-pages texinfo sudo git bash-completion"
+BASE_SYSTEM_PKGS="base base-devel bash-completion dosfstools e2fsprogs exfatprogs git intel-ucode linux linux-firmware linux-headers man-db man-pages networkmanager neovim pacman-contrib reflector sof-firmware sudo texinfo"
 INITRAMFS_HOOKS="systemd autodetect modconf kms block filesystems"
 SWAP_FILE_SIZE="8G"
 
@@ -65,14 +65,8 @@ genfstab -U /mnt >> /mnt/etc/fstab
 
 # Change root into the new system
 echo "Changing root into the new system..."
-arch-chroot /mnt /bin/bash <<EOF
+arch-chroot /mnt /bin/bash <<OUTER_EOF
 set -euo pipefail
-
-# Create a swap file
-echo "Creating a swap file..."
-mkswap -U clear -s "$SWAP_FILE_SIZE" -F /swapfile
-echo "/swapfile none swap defaults 0 0" >> /etc/fstab
-
 # Set time zone
 echo "Setting time zone and synchronizing hardware clock..."
 ln -sf "/usr/share/zoneinfo/${TIME_ZONE}" /etc/localtime
@@ -101,11 +95,11 @@ echo "$HOSTNAME" > /etc/hostname
 
 # Set hosts
 echo "Setting hosts..."
-cat > /etc/hosts <<HOSTS
+cat > /etc/hosts <<INNER_EOF
 127.0.0.1   localhost
 ::1         localhost
 127.0.1.1   ${HOSTNAME}.localdomain   ${HOSTNAME}
-HOSTS
+INNER_EOF
 
 # Enable NetworkManager service
 echo "Enabling NetworkManager service..."
@@ -130,31 +124,51 @@ echo "Allowing wheel group sudo access..."
 echo "%wheel ALL=(ALL) ALL" > /etc/sudoers.d/wheel
 chmod 0440 /etc/sudoers.d/wheel
 
-# Install and configure systemd-boot
-echo "Installing and configuring systemd-boot..."
+# Install systemd-boot
+echo "Installing..."
 bootctl install
 
-cat > /boot/loader/loader.conf <<LOADER
+# Configure systemd-boot
+echo "Configuring systemd-boot..."
+
+cat > /boot/loader/loader.conf <<INNER_EOF
 default        arch.conf
 timeout        0
 console-mode   max
 editor         no
-LOADER
+INNER_EOF
 
-cat > /boot/loader/entries/arch.conf <<ENTRY
+cat > /boot/loader/entries/arch.conf <<INNER_EOF
 title     Arch Linux
 linux     /vmlinuz-linux
 initrd    /initramfs-linux.img
 options   ${KERNEL_PARAMETERS}
-ENTRY
+INNER_EOF
 
-cat > /boot/loader/entries/arch-fallback.conf <<ENTRY
+cat > /boot/loader/entries/arch-fallback.conf <<INNER_EOF
 title     Arch Linux (fallback)
 linux     /vmlinuz-linux
 initrd    /initramfs-linux-fallback.img
 options   ${KERNEL_PARAMETERS}
-ENTRY
-EOF
+INNER_EOF
+
+# Create a swap file
+echo "Creating a swap file..."
+mkswap -U clear -s "$SWAP_FILE_SIZE" -F /swapfile
+echo "/swapfile none swap defaults 0 0" >> /etc/fstab
+
+# Configure reflector
+echo "Configuring reflector..."
+echo "$REFLECTOR_ARGS" > /etc/xdg/reflector/reflector.conf
+
+# Enable reflector.timer
+echo "Enabling reflector.timer..."
+systemctl enable reflector.timer
+
+# Enable paccache.timer
+echo "Enabling paccache.timer..."
+systemctl enable paccache.timer
+OUTER_EOF
 
 # Unmount partitions
 echo "Unmounting partitions..."
