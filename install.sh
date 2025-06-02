@@ -30,7 +30,7 @@ done
 
 # Configure systemd-timesyncd
 echo "Configuring systemd-timesyncd..."
-sed -i "s/^#NTP=.*/NTP=0.asia.pool.ntp.org 1.asia.pool.ntp.org 2.asia.pool.ntp.org 3.asia.pool.ntp.org/" /etc/systemd/timesyncd.conf
+sed -i "s/^#NTP=/NTP=${NTP_SERVERS}/" /etc/systemd/timesyncd.conf
 
 # Restart systemd-timesyncd
 echo "Restarting systemd-timesyncd..."
