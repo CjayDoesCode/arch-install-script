@@ -12,7 +12,12 @@ NTP_SERVERS="0.asia.pool.ntp.org 1.asia.pool.ntp.org 2.asia.pool.ntp.org 3.asia.
 REFLECTOR_ARGS="--save /etc/pacman.d/mirrorlist -f 5 -c sg -p https"
 
 KERNEL_PARAMETERS="root=${ROOT} rw quiet loglevel=3 systemd.show_status=auto rd.udev.log_level=3"
-BASE_SYSTEM_PKGS="base base-devel bash-completion dosfstools e2fsprogs exfatprogs git intel-ucode linux linux-firmware linux-headers man-db man-pages networkmanager neovim pacman-contrib reflector sof-firmware sudo texinfo"
+BASE_SYSTEM_PKGS="
+    base base-devel bash-completion dosfstools e2fsprogs exfatprogs
+    git intel-ucode linux linux-firmware linux-headers man-db man-pages
+    networkmanager neovim pacman-contrib reflector sof-firmware sudo texinfo
+"
+BASE_SYSTEM_PKGS=$(echo "$BASE_SYSTEM_PKGS")
 INITRAMFS_HOOKS="systemd autodetect modconf kms block filesystems"
 SWAP_FILE_SIZE="8G"
 
