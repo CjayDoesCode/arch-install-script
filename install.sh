@@ -29,72 +29,75 @@ while true; do
 done
 
 # Configure systemd-timesyncd
-echo "Configuring systemd-timesyncd..."
+echo "Configuring systemd-timesyncd..." && sleep 1
 sed -i "s/^#NTP=/NTP=${NTP_SERVERS}/" /etc/systemd/timesyncd.conf
 
 # Restart systemd-timesyncd
-echo "Restarting systemd-timesyncd..."
+echo "Restarting systemd-timesyncd..." && sleep 1
 systemctl restart systemd-timesyncd.service
+
+# Wait for system clock to synchronize
+echo "Waiting for system clock to synchronize..." && sleep 1
 sleep 5
 
 # Partition the disk
-echo "Partitioning the disk..."
+echo "Partitioning the disk..." && sleep 1
 echo -e "label: gpt\n,1G,U\n,,L" | sfdisk -w always -W always "$DRIVE"
 
 # Format partitions
-echo "Formatting partitions..."
+echo "Formatting partitions..." && sleep 1
 mkfs.ext4 "$ROOT"
 mkfs.fat -F32 "$BOOT"
 
 # Mount partitions
-echo "Mounting partitions..."
+echo "Mounting partitions..." && sleep 1
 mount "$ROOT" /mnt
 mount -m "$BOOT" /mnt/boot
 
 # Update mirrorlist
-echo "Updating mirrorlist..."
+echo "Updating mirrorlist..." && sleep 1
 reflector $REFLECTOR_ARGS
 
 # Install base system packages
-echo "Installing base system packages..."
+echo "Installing base system packages..." && sleep 1
 pacstrap -K /mnt $BASE_SYSTEM_PKGS
 
 # Generate file systems table
-echo "Generating file systems table..."
+echo "Generating file systems table..." && sleep 1
 genfstab -U /mnt >> /mnt/etc/fstab
 
 # Change root into the new system
-echo "Changing root into the new system..."
+echo "Changing root into the new system..." && sleep 1
 arch-chroot /mnt /bin/bash <<OUTER_EOF
 set -euo pipefail
 # Set time zone
-echo "Setting time zone and synchronizing hardware clock..."
+echo "Setting time zone and synchronizing hardware clock..." && sleep 1
 ln -sf "/usr/share/zoneinfo/${TIME_ZONE}" /etc/localtime
 
 # Set the hardware clock
-echo "Setting the hardware clock..."
+echo "Setting the hardware clock..." && sleep 1
 hwclock -w
 
 # Enable systemd-timesyncd
-echo "Enabling systemd-timesyncd..."
+echo "Enabling systemd-timesyncd..." && sleep 1
 systemctl enable systemd-timesyncd.service
 
 # Configure systemd-timesyncd
-echo "Configuring systemd-timesyncd..."
+echo "Configuring systemd-timesyncd..." && sleep 1
 mkdir /etc/systemd/timesyncd.conf.d
 echo -e "[Time]\nNTP=${NTP_SERVERS}" > /etc/systemd/timesyncd.conf.d/ntp.conf
 
 # Set locale
-echo "Setting locale..."
+echo "Setting locale..." && sleep 1
 sed -i "/^#${LOCALE}/s/^#//" /etc/locale.gen && locale-gen
 echo "LANG=${LANGUAGE}" > /etc/locale.conf
 
 # Set hostname
-echo "Setting hostname..."
+echo "Setting hostname..." && sleep 1
 echo "$HOSTNAME" > /etc/hostname
 
 # Set hosts
-echo "Setting hosts..."
+echo "Setting hosts..." && sleep 1
 cat > /etc/hosts <<INNER_EOF
 127.0.0.1   localhost
 ::1         localhost
@@ -102,34 +105,34 @@ cat > /etc/hosts <<INNER_EOF
 INNER_EOF
 
 # Enable NetworkManager service
-echo "Enabling NetworkManager service..."
+echo "Enabling NetworkManager service..." && sleep 1
 systemctl enable NetworkManager.service
 
 # Configure mkinitcpio
-echo "Configuring mkinitcpio..."
+echo "Configuring mkinitcpio..." && sleep 1
 echo "HOOKS=(${INITRAMFS_HOOKS})" > /etc/mkinitcpio.conf.d/hooks.conf
 mkinitcpio -P
 
 # Set root password
-echo "Setting root password..."
+echo "Setting root password..." && sleep 1
 echo "$password" | passwd -s root
 
 # Create a user
-echo "Creating a user..."
+echo "Creating a user..." && sleep 1
 useradd -m -G wheel "$username"
 echo "$password" | passwd -s "$username"
 
 # Allow wheel group sudo access
-echo "Allowing wheel group sudo access..."
+echo "Allowing wheel group sudo access..." && sleep 1
 echo "%wheel ALL=(ALL) ALL" > /etc/sudoers.d/wheel
 chmod 0440 /etc/sudoers.d/wheel
 
 # Install systemd-boot
-echo "Installing..."
+echo "Installing systemd-boot..." && sleep 1
 bootctl install
 
 # Configure systemd-boot
-echo "Configuring systemd-boot..."
+echo "Configuring systemd-boot..." && sleep 1
 
 cat > /boot/loader/loader.conf <<INNER_EOF
 default        arch.conf
@@ -153,30 +156,30 @@ options   ${KERNEL_PARAMETERS}
 INNER_EOF
 
 # Create a swap file
-echo "Creating a swap file..."
+echo "Creating a swap file..." && sleep 1
 mkswap -U clear -s "$SWAP_FILE_SIZE" -F /swapfile
 echo "/swapfile none swap defaults 0 0" >> /etc/fstab
 
 # Configure reflector
-echo "Configuring reflector..."
+echo "Configuring reflector..." && sleep 1
 echo "$REFLECTOR_ARGS" > /etc/xdg/reflector/reflector.conf
 
 # Enable reflector.timer
-echo "Enabling reflector.timer..."
+echo "Enabling reflector.timer..." && sleep 1
 systemctl enable reflector.timer
 
 # Enable paccache.timer
-echo "Enabling paccache.timer..."
+echo "Enabling paccache.timer..." && sleep 1
 systemctl enable paccache.timer
 OUTER_EOF
 
 # Unmount partitions
-echo "Unmounting partitions..."
+echo "Unmounting partitions..." && sleep 1
 umount -R /mnt
 
 # Prompt for reboot
 read -p "Installation finished. Reboot now? (y/N): " input
 if [[ "$input" =~ ^[Yy]$ ]]; then
-    echo "Rebooting now..."
+    echo "Rebooting now..." && sleep 1
     reboot
 fi
