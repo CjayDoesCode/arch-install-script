@@ -10,10 +10,9 @@ NTP_SERVERS="0.asia.pool.ntp.org 1.asia.pool.ntp.org 2.asia.pool.ntp.org 3.asia.
 REFLECTOR_ARGS="--save /etc/pacman.d/mirrorlist -f 5 -c sg -p https"
 
 KERNEL_PARAMETERS="root=${ROOT} rw quiet loglevel=3 systemd.show_status=auto rd.udev.log_level=3"
-BASE_SYSTEM_PKGS="base linux linux-firmware intel-ucode networkmanager neovim man-db man-pages texinfo sudo"
-ADDITIONAL_PKGS="base-devel linux-headers sof-firmware dosfstools exfatprogs e2fsprogs git bash-completion"
+BASE_SYSTEM_PKGS="base base-devel linux linux-headers linux-firmware sof-firmware intel-ucode dosfstools exfatprogs e2fsprogs networkmanager neovim man-db man-pages texinfo sudo git bash-completion"
 INITRAMFS_HOOKS="systemd autodetect modconf kms block filesystems"
-SWAP_FILE_SIZE="8"
+SWAP_FILE_SIZE="8G"
 
 LOCALE="en_US.UTF-8 UTF-8"
 TIME_ZONE="Asia/Manila"
@@ -58,7 +57,7 @@ reflector $REFLECTOR_ARGS
 
 # Install base system packages
 echo "Installing base system packages..."
-pacstrap -K /mnt $BASE_SYSTEM_PKGS $ADDITIONAL_PKGS
+pacstrap -K /mnt $BASE_SYSTEM_PKGS
 
 # Generate file systems table
 echo "Generating file systems table..."
