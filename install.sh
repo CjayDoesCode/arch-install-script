@@ -9,6 +9,7 @@ BOOT="${DRIVE}p1"
 NTP_SERVERS="0.asia.pool.ntp.org 1.asia.pool.ntp.org 2.asia.pool.ntp.org 3.asia.pool.ntp.org"
 REFLECTOR_ARGS="--save /etc/pacman.d/mirrorlist -f 5 -c sg -p https"
 
+KERNEL_PARAMETERS="root=${ROOT} rw quiet loglevel=3 systemd.show_status=auto rd.udev.log_level=3"
 BASE_SYSTEM_PKGS="base linux linux-firmware intel-ucode networkmanager neovim man-db man-pages texinfo sudo"
 ADDITIONAL_PKGS="base-devel linux-headers sof-firmware dosfstools exfatprogs e2fsprogs git bash-completion"
 INITRAMFS_HOOKS="systemd autodetect modconf kms block filesystems"
@@ -70,12 +71,12 @@ set -euo pipefail
 
 # Create a swap file
 echo "Creating a swap file..."
-mkswap -U clear -s $SWAP_FILE_SIZE -F /swapfile
+mkswap -U clear -s "$SWAP_FILE_SIZE" -F /swapfile
 echo "/swapfile none swap defaults 0 0" >> /etc/fstab
 
 # Set time zone
 echo "Setting time zone and synchronizing hardware clock..."
-ln -sf /usr/share/zoneinfo/$TIME_ZONE /etc/localtime
+ln -sf "/usr/share/zoneinfo/${TIME_ZONE}" /etc/localtime
 
 # Set the hardware clock
 echo "Setting the hardware clock..."
@@ -145,14 +146,14 @@ cat > /boot/loader/entries/arch.conf <<ENTRY
 title     Arch Linux
 linux     /vmlinuz-linux
 initrd    /initramfs-linux.img
-options   root="$ROOT" rw quiet loglevel=3 systemd.show_status=auto rd.udev.log_level=3
+options   ${KERNEL_PARAMETERS}
 ENTRY
 
 cat > /boot/loader/entries/arch-fallback.conf <<ENTRY
 title     Arch Linux (fallback)
 linux     /vmlinuz-linux
 initrd    /initramfs-linux-fallback.img
-options   root="$ROOT" rw quiet loglevel=3 systemd.show_status=auto rd.udev.log_level=3
+options   ${KERNEL_PARAMETERS}
 ENTRY
 EOF
 
