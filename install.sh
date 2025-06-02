@@ -1,89 +1,129 @@
 #!/bin/bash
 set -euo pipefail
 
+# Variables
+DRIVE="/dev/nvme0n1"
+ROOT="${DRIVE}p2"
+BOOT="${DRIVE}p1"
+
+NTP_SERVERS="0.asia.pool.ntp.org 1.asia.pool.ntp.org 2.asia.pool.ntp.org 3.asia.pool.ntp.org"
+REFLECTOR_ARGS="--save /etc/pacman.d/mirrorlist -f 5 -c sg -p https"
+
+BASE_SYSTEM_PKGS="base linux linux-firmware intel-ucode networkmanager neovim man-db man-pages texinfo sudo"
+ADDITIONAL_PKGS="base-devel linux-headers sof-firmware dosfstools exfatprogs e2fsprogs git bash-completion"
+INITRAMFS_HOOKS="systemd autodetect modconf kms block filesystems"
+SWAP_FILE_SIZE="8"
+
+LOCALE="en_US.UTF-8 UTF-8"
+TIME_ZONE="Asia/Manila"
+LANGUAGE="en_US.UTF-8"
+HOSTNAME="archlinux"
+
 # Prompt for user credentials
-read -rp "Enter username: " USERNAME
+read -rp "Enter username: " username
 while true; do
-    read -rsp "Enter password: " PASSWORD && echo
-    read -rsp "Confirm password: " PASSWORD_CONFIRM && echo
-    [[ "$PASSWORD" == "$PASSWORD_CONFIRM" ]] && break
+    read -rsp "Enter password: " password && echo
+    read -rsp "Confirm password: " password_confirm && echo
+    [[ "$password" == "$password_confirm" ]] && break
     echo "Passwords do not match. Try again."
 done
 
 # Configure systemd-timesyncd
 echo "Configuring systemd-timesyncd..."
 sed -i "s/^#NTP=.*/NTP=0.asia.pool.ntp.org 1.asia.pool.ntp.org 2.asia.pool.ntp.org 3.asia.pool.ntp.org/" /etc/systemd/timesyncd.conf
+
+# Restart systemd-timesyncd
+echo "Restarting systemd-timesyncd..."
 systemctl restart systemd-timesyncd.service
 sleep 5
 
 # Partition the disk
 echo "Partitioning the disk..."
-echo -e "label: gpt\n,1G,U\n,,L" | sfdisk -w always -W always /dev/nvme0n1
+echo -e "label: gpt\n,1G,U\n,,L" | sfdisk -w always -W always "$DRIVE"
 
 # Format partitions
-echo "Formating partitions..."
-mkfs.fat -F32 /dev/nvme0n1p1
-mkfs.ext4 /dev/nvme0n1p2
+echo "Formatting partitions..."
+mkfs.ext4 "$ROOT"
+mkfs.fat -F32 "$BOOT"
 
 # Mount partitions
 echo "Mounting partitions..."
-mount /dev/nvme0n1p2 /mnt
-mount --mkdir /dev/nvme0n1p1 /mnt/boot
+mount "$ROOT" /mnt
+mount -m "$BOOT" /mnt/boot
 
 # Update mirrorlist
 echo "Updating mirrorlist..."
-reflector --save /etc/pacman.d/mirrorlist -f 5 -c sg -p https
+reflector $REFLECTOR_ARGS
 
-# Install essential packages
-echo "Installing essential packages..."
-pacstrap -K /mnt base base-devel linux linux-headers linux-firmware sof-firmware intel-ucode dosfstools exfatprogs e2fsprogs networkmanager neovim man-db man-pages texinfo sudo git bash-completion
+# Install base system packages
+echo "Installing base system packages..."
+pacstrap -K /mnt $BASE_SYSTEM_PKGS $ADDITIONAL_PKGS
 
-# Generate fstab
-echo "Generating fstab..."
+# Generate file systems table
+echo "Generating file systems table..."
 genfstab -U /mnt >> /mnt/etc/fstab
 
-# Chroot and configure the system
-echo "Chrooting and configuring the system..."
+# Change root into the new system
+echo "Changing root into the new system..."
 arch-chroot /mnt /bin/bash <<EOF
 set -euo pipefail
 
 # Create a swap file
 echo "Creating a swap file..."
-mkswap -U clear -s 8G -F /swapfile
+mkswap -U clear -s $SWAP_FILE_SIZE -F /swapfile
 echo "/swapfile none swap defaults 0 0" >> /etc/fstab
 
-# Set timezone and synchronize hardware clock
-echo "Setting timezone and synchronizing hardware clock..."
-ln -sf /usr/share/zoneinfo/Asia/Manila /etc/localtime
-hwclock --systohc
+# Set time zone
+echo "Setting time zone and synchronizing hardware clock..."
+ln -sf /usr/share/zoneinfo/$TIME_ZONE /etc/localtime
+
+# Set the hardware clock
+echo "Setting the hardware clock..."
+hwclock -w
+
+# Enable systemd-timesyncd
+echo "Enabling systemd-timesyncd..."
+systemctl enable systemd-timesyncd.service
 
 # Configure systemd-timesyncd
 echo "Configuring systemd-timesyncd..."
 mkdir /etc/systemd/timesyncd.conf.d
-echo -e "[Time]\nNTP=0.asia.pool.ntp.org 1.asia.pool.ntp.org 2.asia.pool.ntp.org 3.asia.pool.ntp.org" > /etc/systemd/timesyncd.conf.d/ntp.conf
-systemctl enable systemd-timesyncd.service
+echo -e "[Time]\nNTP=${NTP_SERVERS}" > /etc/systemd/timesyncd.conf.d/ntp.conf
 
 # Set locale
 echo "Setting locale..."
-sed -i "/^#en_US\\.UTF-8 UTF-8/s/^#//" /etc/locale.gen && locale-gen
-echo "LANG=en_US.UTF-8" > /etc/locale.conf
+sed -i "/^#${LOCALE}/s/^#//" /etc/locale.gen && locale-gen
+echo "LANG=${LANGUAGE}" > /etc/locale.conf
 
 # Set hostname
 echo "Setting hostname..."
-echo "archlinux" > /etc/hostname
+echo "$HOSTNAME" > /etc/hostname
+
+# Set hosts
+echo "Setting hosts..."
+cat > /etc/hosts <<HOSTS
+127.0.0.1   localhost
+::1         localhost
+127.0.1.1   ${HOSTNAME}.localdomain   ${HOSTNAME}
+HOSTS
 
 # Enable NetworkManager service
 echo "Enabling NetworkManager service..."
 systemctl enable NetworkManager.service
 
+# Configure mkinitcpio
+echo "Configuring mkinitcpio..."
+echo "HOOKS=(${INITRAMFS_HOOKS})" > /etc/mkinitcpio.conf.d/hooks.conf
+mkinitcpio -P
+
 # Set root password
 echo "Setting root password..."
-echo "$PASSWORD" | passwd -s root
+echo "$password" | passwd -s root
 
-# Create user
-echo "Creating user..."
-useradd -m -G wheel "$USERNAME"
-echo "$PASSWORD" | passwd -s "$USERNAME"
+# Create a user
+echo "Creating a user..."
+useradd -m -G wheel "$username"
+echo "$password" | passwd -s "$username"
 
 # Allow wheel group sudo access
 echo "Allowing wheel group sudo access..."
@@ -95,23 +135,24 @@ echo "Installing and configuring systemd-boot..."
 bootctl install
 
 cat > /boot/loader/loader.conf <<LOADER
-default arch.conf
-console-mode max
-editor no
+default        arch.conf
+timeout        0
+console-mode   max
+editor         no
 LOADER
 
 cat > /boot/loader/entries/arch.conf <<ENTRY
-title Arch Linux
-linux /vmlinuz-linux
-initrd /initramfs-linux.img
-options root=/dev/nvme0n1p2 rw
+title     Arch Linux
+linux     /vmlinuz-linux
+initrd    /initramfs-linux.img
+options   root="$ROOT" rw quiet loglevel=3 systemd.show_status=auto rd.udev.log_level=3
 ENTRY
 
 cat > /boot/loader/entries/arch-fallback.conf <<ENTRY
-title Arch Linux (fallback)
-linux /vmlinuz-linux
-initrd /initramfs-linux-fallback.img
-options root=/dev/nvme0n1p2 rw
+title     Arch Linux (fallback)
+linux     /vmlinuz-linux
+initrd    /initramfs-linux-fallback.img
+options   root="$ROOT" rw quiet loglevel=3 systemd.show_status=auto rd.udev.log_level=3
 ENTRY
 EOF
 
@@ -119,4 +160,9 @@ EOF
 echo "Unmounting partitions..."
 umount -R /mnt
 
-echo "Installation successful!"
+# Prompt for reboot
+read -p "Installation finished. Reboot now? (y/N): " input
+if [[ "$input" =~ ^[Yy]$ ]]; then
+    echo "Rebooting now..."
+    reboot
+fi
