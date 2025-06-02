@@ -158,11 +158,6 @@ mkinitcpio -P
 echo "Setting password of root..." && sleep 1
 echo "$password" | passwd -s root
 
-# Change default shell of root
-
-echo "Changing default shell of root..." && sleep 1
-chsh -s /usr/bin/zsh root
-
 # Create user
 
 echo "Creating user..." && sleep 1
