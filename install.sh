@@ -199,6 +199,12 @@ initrd    /initramfs-linux-fallback.img
 options   ${KERNEL_PARAMETERS}
 INNER_EOF
 
+# Configure pacman
+
+echo "Configuring pacman..." && sleep 1
+sed -i "/^#Color/s/^#//" /etc/pacman.conf
+sed -i "/^#VerbosePkgLists/s/^#//" /etc/pacman.conf
+
 # Configure reflector
 
 echo "Configuring reflector..." && sleep 1
