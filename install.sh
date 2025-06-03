@@ -245,16 +245,6 @@ systemctl enable reflector.timer
 echo "Enabling paccache.timer..." && sleep 1
 systemctl enable paccache.timer
 
-# Install RTL8822CE driver
-
-echo "Installing RTL8822CE driver..." && sleep 1
-git clone https://github.com/juanro49/rtl88x2ce-dkms.git
-cp rtl88x2ce-dkms/rtw88_blacklist.conf /etc/modprobe.d/rtw88_blacklist.conf
-mv rtl88x2ce-dkms /usr/src/rtl88x2ce-35403
-dkms add -m rtl88x2ce -v 35403
-dkms build -m rtl88x2ce -v 35403
-dkms install -m rtl88x2ce -v 35403
-
 OUTER_EOF
 
 # Unmount partitions
