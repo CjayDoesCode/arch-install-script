@@ -167,6 +167,7 @@ echo "$password" | passwd -s "$username"
 
 # Configure zsh
 
+echo "Configuring zsh..." && sleep 1
 cat > /home/cjay/.zshrc <<INNER_EOF
 alias ls='ls --color=auto'
 alias ll='ls -lah --color=auto'
