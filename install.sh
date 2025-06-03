@@ -13,10 +13,11 @@ REFLECTOR_ARGS="--save /etc/pacman.d/mirrorlist -f 5 -c sg -p https"
 
 KERNEL_PARAMETERS="root=${ROOT} rw quiet loglevel=3 systemd.show_status=auto rd.udev.log_level=3"
 BASE_SYSTEM_PKGS="
-    base base-devel bc bottom dkms dosfstools e2fsprogs exfatprogs fastfetch git gnupg intel-ucode
-    linux linux-firmware linux-headers man-db man-pages mesa networkmanager neovim openssh
-    pacman-contrib pipewire pipewire-alsa pipewire-audio pipewire-jack pipewire-pulse
-    reflector sof-firmware sudo texinfo vulkan-intel wireplumber zsh zsh-completions
+    base base-devel bc bottom dkms dosfstools e2fsprogs exfatprogs fastfetch git
+    gnupg intel-ucode linux linux-firmware linux-headers man-db man-pages mesa
+    networkmanager neovim openssh pacman-contrib pipewire pipewire-alsa pipewire-audio
+    pipewire-jack pipewire-pulse reflector sof-firmware sudo texinfo vulkan-intel
+    wireplumber zsh zsh-autosuggestions zsh-completions zsh-syntax-highlighting
 "
 BASE_SYSTEM_PKGS=$(echo "$BASE_SYSTEM_PKGS")
 INITRAMFS_HOOKS="systemd autodetect modconf kms block filesystems"
@@ -163,6 +164,30 @@ echo "$password" | passwd -s root
 echo "Creating user..." && sleep 1
 useradd -m -G wheel -s /usr/bin/zsh "$username"
 echo "$password" | passwd -s "$username"
+
+# Configure zsh
+
+cat > /home/cjay/.zshrc <<INNER_EOF
+alias ls='ls --color=auto'
+alias ll='ls -lah --color=auto'
+alias grep='grep --color=auto'
+
+autoload -Uz promptinit compinit
+promptinit
+compinit
+prompt walters
+
+bindkey -e
+
+setopt histignorealldups sharehistory
+
+HISTSIZE=1000
+SAVEHIST=1000
+HISTFILE=~/.zsh_history
+
+source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+INNER_EOF
 
 # Allow wheel group sudo access
 
