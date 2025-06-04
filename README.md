@@ -1,9 +1,12 @@
-# Arch Linux Install Script
+# Arch Linux Install Scripts
 
-Scripts to automate installing a minimal Arch Linux system.
+Bash scripts to automate the installation of a minimal Arch Linux system from the live environment of the official installation image.
+
+These scripts are based on the procedures outlined in the ArchWiki Installation Guide.
 
 > [!WARNING]
-> This script is made for my personal device and may not work correctly on other systems.
+> These scripts are configured for my specific hardware and environment.
+> If you intend to use them, carefully review and modify the code to suit your system.
 
 ## Usage
 
