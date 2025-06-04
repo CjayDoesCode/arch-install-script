@@ -3,7 +3,7 @@
 Scripts to automate installing a minimal Arch Linux system.
 
 > [!WARNING]
-> This script is for my personal device and may not work elsewhere. **Use as reference only**.
+> This script is made for my personal device and may not work correctly on other systems.
 
 ## Usage
 
