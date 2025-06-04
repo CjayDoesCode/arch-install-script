@@ -1,23 +1,26 @@
 # Arch Linux Install Script
 
+Scripts to automate installing a minimal Arch Linux system.
+
 > [!WARNING]
-> This script is for my personal device and may not work elsewhere. Use as reference only.
+> This script is for my personal device and may not work elsewhere. **Use as reference only**.
 
-## How to Use
+## Usage
 
-1. Download the script:
+1. Clone the repository:
 
 ```bash
-curl -O https://raw.githubusercontent.com/CjayDoesCode/arch-install-script/refs/heads/main/install.sh
+git clone https://github.com/CjayDoesCode/arch-install-script.git
+cd arch-install-scripts
 ```
 
-2. Make the script executable:
+2. Allow `install.sh` to be executed:
 
 ```bash
 chmod +x install.sh
 ```
 
-3. Run the script:
+3. Run the `install.sh` script:
 
 ```bash
 ./install.sh
