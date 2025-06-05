@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -euo pipefail
-source constants.sh
+source /root/constants.sh
 
 # --- variables ---
 
