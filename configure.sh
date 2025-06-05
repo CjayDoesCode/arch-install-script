@@ -143,7 +143,7 @@ sed -i '/#Color/s/#//' /etc/pacman.conf
 # --- configure reflector ---
 
 echo 'Configuring reflector...'
-echo "${REFLECTOR_ARGS[@]}" > /etc/xdg/reflector/reflector.conf
+echo "${REFLECTOR_ARGS[*]}" > /etc/xdg/reflector/reflector.conf
 systemctl enable reflector.timer
 
 # --- configure paccache ---
