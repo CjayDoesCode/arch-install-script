@@ -50,27 +50,27 @@ pacstrap -K /mnt "${BASE_SYSTEM_PKGS[@]}"
 # --- configure new system ---
 
 # generate file systems table
-echo "Generating file systems table..."
+echo 'Generating file systems table...'
 genfstab -U /mnt >> /mnt/etc/fstab
 
 # change root to new system
-echo "Changing root to new system..."
+echo 'Changing root to new system...'
 cp configure.sh constants.sh /mnt/root/
 arch-chroot /mnt /bin/bash /root/configure.sh "$username" "$password"
 rm /mnt/root/configure.sh /mnt/root/constants.sh
 
 # --- unmount partitions ---
 
-echo "Unmounting partitions..."
+echo 'Unmounting partitions...'
 umount --recursive /mnt
 
 # --- prompt for reboot ---
 
-read -rp "Installation finished. Reboot now? (Y/n): " input
+read -rp 'Installation finished. Reboot now? (Y/n): ' input
 
 if [ "$input" = 'n' ] || [ "$input" = 'N' ]; then
     exit 0
 fi
 
-echo "Rebooting now..."
+echo 'Rebooting now...'
 reboot
