@@ -11,7 +11,7 @@ Bash scripts to automate the installation of a base Arch Linux system from the l
 2. Clone the repository:
 
 ```bash
-git clone https://github.com/CjayDoesCode/arch-install-script.git
+git clone https://github.com/CjayDoesCode/arch-install-scripts.git
 cd arch-install-scripts
 ```
 
