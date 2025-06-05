@@ -56,7 +56,7 @@ genfstab -U /mnt >> /mnt/etc/fstab
 # change root to new system
 echo 'Changing root to new system...'
 cp configure.sh constants.sh /mnt/root/
-arch-chroot /mnt /bin/bash /root/configure.sh "$username" "$password"
+arch-chroot /mnt /bin/bash /mnt/root/configure.sh "$username" "$password"
 rm /mnt/root/configure.sh /mnt/root/constants.sh
 
 # --- unmount partitions ---
