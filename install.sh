@@ -66,7 +66,7 @@ umount --recursive /mnt
 
 # --- prompt for reboot ---
 
-read -rp 'Installation finished. Reboot now? (Y/n): ' input
+read -rp 'Installation completed. Reboot now? (Y/n): ' input
 
 if [ "$input" = 'n' ] || [ "$input" = 'N' ]; then
     exit 0
