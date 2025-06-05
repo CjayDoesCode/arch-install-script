@@ -12,6 +12,11 @@ Bash scripts to automate the installation of a base Arch Linux system from the l
 
 ```bash
 curl -L https://api.github.com/repos/CjayDoesCode/arch-install-scripts/tarball/main | tar -xz
+```
+
+3. Change directory to the repository:
+
+```bash
 cd */
 ```
 
