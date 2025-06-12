@@ -28,7 +28,6 @@ BASE_SYSTEM_PKGS=(
     linux-headers
     man-db
     man-pages
-    neovim
     networkmanager
     openssh
     pacman-contrib
@@ -65,13 +64,6 @@ PIPEWIRE_PKGS=(
     pipewire-jack
     pipewire-pulse
     wireplumber
-)
-
-ZSH_PKGS=(
-    zsh
-    zsh-autosuggestions
-    zsh-completions
-    zsh-syntax-highlighting
 )
 
 OPTIONAL_PKGS=(

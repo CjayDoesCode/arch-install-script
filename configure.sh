@@ -64,39 +64,12 @@ mkinitcpio --allpresets
 # --- create new user ---
 
 echo 'Creating user...'
-useradd --groups wheel --create-home --shell /usr/bin/zsh $USERNAME
+useradd --groups wheel --create-home --shell /usr/bin/bash $USERNAME
 
 # --- set password of new user and root ---
 
 echo "root:$PASSWORD" | chpasswd
 echo "$USERNAME:$PASSWORD" | chpasswd
-
-# --- configure zsh ---
-
-echo 'Configuring zsh...'
-cat << ZSHRC > /home/$USERNAME/.zshrc
-alias ls='ls --color=auto'
-alias ll='ls -lah --color=auto'
-alias grep='grep --color=auto'
-
-autoload -Uz promptinit compinit
-promptinit
-compinit
-prompt walters
-
-bindkey -e
-
-setopt histignorealldups sharehistory
-
-HISTSIZE=1000
-SAVEHIST=1000
-HISTFILE=~/.zsh_history
-
-source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
-ZSHRC
-
-chown $USERNAME:$USERNAME /home/$USERNAME/.zshrc
 
 # --- configure sudo ---
 

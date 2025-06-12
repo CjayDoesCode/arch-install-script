@@ -57,7 +57,6 @@ SYSTEM_PKGS=(
     ${BASE_SYSTEM_PKGS[@]}
     ${USERSPACE_UTIL_PKGS[@]}
     ${PIPEWIRE_PKGS[@]}
-    ${ZSH_PKGS[@]}
 )
 
 read -rp 'Install Intel driver packages? (Y/n): ' INPUT
