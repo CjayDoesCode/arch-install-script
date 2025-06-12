@@ -31,7 +31,7 @@ read -rp 'Install AMD driver packages? (Y/n): ' INPUT
 for PKG in ${OPTIONAL_PKGS[@]}; do
     read -rp "Install $PKG? (Y/n): " INPUT
     [[ ! "$INPUT" =~ ^[nN]$ ]] && SYSTEM_PKGS+=($PKG)
-done;
+done
 
 # --- synchronize system clock ---
 
