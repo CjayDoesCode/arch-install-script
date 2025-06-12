@@ -5,12 +5,50 @@ source config.sh
 
 # --- prompt for user credentials ---
 
-read -rp 'Enter username for new user: ' USERNAME
+while true; do
+    read -rp 'Enter username for new user: ' USERNAME
+    [[ "$USERNAME" =~ ^[a-zA-Z0-9_-]+$ ]] && break
+    echo 'Invalid username. Try again.'
+done
+
 while true; do
     read -rsp 'Enter password for new user and root: ' PASSWORD && echo
     read -rsp 'Confirm password for new user and root: ' PASSWORD_CONFIRM && echo
     [[ "$PASSWORD" == "$PASSWORD_CONFIRM" ]] && break
     echo 'Passwords do not match. Try again.'
+done
+
+# --- prompt for target disk ---
+
+echo "Available disks:"
+lsblk --noheadings --output NAME,SIZE,MODEL --paths | grep -E '/dev/sda|/dev/nvme0n1'
+
+while true; do
+    read -rp "Enter target disk (e.g., /dev/sda): " TARGET_DISK
+
+    if [[ "$TARGET_DISK" == '/dev/sda' ]]; then
+        ROOT_PARTITION=${TARGET_DISK}2
+        BOOT_PARTITION=${TARGET_DISK}1
+        break
+    elif [[ "$TARGET_DISK" == '/dev/nvme0n1' ]]; then
+        ROOT_PARTITION=${TARGET_DISK}p2
+        BOOT_PARTITION=${TARGET_DISK}p1
+        break
+    fi
+
+    echo "Invalid disk. Please try again."
+done
+
+# --- prompt for swap file size ---
+
+while true; do
+    read -rp "Enter swap file size (e.g., 8GiB): " SWAP_FILE_SIZE
+
+    if [[ "$SWAP_FILE_SIZE" =~ ^[0-9]+GiB$ ]]; then
+        break
+    fi
+
+    echo "Invalid swap file size. Please try again."
 done
 
 # --- prompt for system packages ---
@@ -75,7 +113,7 @@ genfstab -U /mnt >> /mnt/etc/fstab
 # change root to new system
 echo 'Changing root to new system...'
 
-cat > /mnt/root/config.sh <<CONFIG
+cat << CONFIG > /mnt/root/config.sh
 TARGET_DISK=$TARGET_DISK
 ROOT_PARTITION=$ROOT_PARTITION
 BOOT_PARTITION=$BOOT_PARTITION
@@ -89,7 +127,7 @@ HOSTNAME=$HOSTNAME
 NTP_SERVERS=(${NTP_SERVERS[*]})
 REFLECTOR_ARGS=(${REFLECTOR_ARGS[*]})
 INITRAMFS_HOOKS=(${INITRAMFS_HOOKS[*]})
-KERNEL_PARAMETERS=(${KERNEL_PARAMETERS[*]})
+KERNEL_PARAMETERS=(root=$ROOT_PARTITION ${KERNEL_PARAMETERS[*]})
 
 USERNAME=$USERNAME
 PASSWORD='$PASSWORD'
