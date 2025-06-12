@@ -1,23 +1,18 @@
 #!/bin/bash
 
 set -euo pipefail
-source /root/constants.sh
-
-# --- variables ---
-
-username=$1
-password=$2
+source /root/config.sh
 
 # --- create swap file ---
 
 echo 'Creating swap file...'
-mkswap --file /swapfile --uuid clear --size "$SWAP_FILE_SIZE" 
+mkswap --file /swapfile --uuid clear --size $SWAP_FILE_SIZE
 echo '/swapfile none swap defaults 0 0' >> /etc/fstab
 
 # --- set time zone ---
 
 echo 'Setting time zone...'
-ln --symbolic --force "/usr/share/zoneinfo/${TIME_ZONE}" /etc/localtime
+ln --symbolic --force /usr/share/zoneinfo/$TIME_ZONE /etc/localtime
 
 # --- set hardware clock ---
 
@@ -48,7 +43,7 @@ echo 'Setting hosts...'
 cat > /etc/hosts <<HOSTS
 127.0.0.1   localhost
 ::1         localhost
-127.0.1.1   ${HOSTNAME}.localdomain   ${HOSTNAME}
+127.0.1.1   $HOSTNAME.localdomain   $HOSTNAME
 HOSTS
 
 # --- set up network manager ---
@@ -69,18 +64,18 @@ mkinitcpio --allpresets
 # --- set password of root ---
 
 echo 'Setting password of root...'
-echo "$password" | passwd --stdin root
+echo "$PASSWORD" | passwd --stdin root
 
 # --- create user ---
 
 echo 'Creating user...'
-useradd --groups wheel --create-home --shell /usr/bin/zsh "$username"
-echo "$password" | passwd --stdin "$username"
+useradd --groups wheel --create-home --shell /usr/bin/zsh $USERNAME
+echo "$PASSWORD" | passwd --stdin $USERNAME
 
 # --- configure zsh ---
 
 echo 'Configuring zsh...'
-cat > "/home/${username}/.zshrc" <<DOTZSHRC
+cat > /home/$USERNAME/.zshrc <<ZSHRC
 alias ls='ls --color=auto'
 alias ll='ls -lah --color=auto'
 alias grep='grep --color=auto'
@@ -100,9 +95,9 @@ HISTFILE=~/.zsh_history
 
 source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
-DOTZSHRC
+ZSHRC
 
-chown "${username}:${username}" "/home/${username}/.zshrc"
+chown $USERNAME:$USERNAME /home/$USERNAME/.zshrc
 
 # --- configure sudo ---
 

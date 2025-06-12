@@ -1,0 +1,109 @@
+TARGET_DISK=/dev/nvme0n1
+ROOT_PARTITION=${TARGET_DISK}p2
+BOOT_PARTITION=${TARGET_DISK}p1
+SWAP_FILE_SIZE=8GiB
+
+TIME_ZONE=Asia/Manila
+LOCALE='en_US.UTF-8 UTF-8'
+LANG=en_US.UTF-8
+HOSTNAME=archlinux
+
+NTP_SERVERS=(
+    0.asia.pool.ntp.org
+    1.asia.pool.ntp.org
+    2.asia.pool.ntp.org
+    3.asia.pool.ntp.org
+)
+
+REFLECTOR_ARGS=(
+    --save /etc/pacman.d/mirrorlist
+    --country Singapore
+    --fastest 5
+    --protocol https
+    --ipv4
+)
+
+BASE_SYSTEM_PKGS=(
+    base
+    base-devel
+    git
+    gnupg
+    linux
+    linux-firmware
+    linux-headers
+    man-db
+    man-pages
+    neovim
+    networkmanager
+    openssh
+    pacman-contrib
+    reflector
+    sudo
+    texinfo
+)
+
+USERSPACE_UTIL_PKGS=(
+    dosfstools
+    e2fsprogs
+    exfatprogs
+    ntfs-3g
+)
+
+INTEL_DRIVER_PKGS=(
+    intel-ucode
+    mesa
+    vulkan-intel
+    xorg-server
+)
+
+AMD_DRIVER_PKGS=(
+    amd-ucode
+    mesa
+    vulkan-radeon
+    xorg-server
+)
+
+PIPEWIRE_PKGS=(
+    pipewire
+    pipewire-alsa
+    pipewire-audio
+    pipewire-jack
+    pipewire-pulse
+    wireplumber
+)
+
+ZSH_PKGS=(
+    zsh
+    zsh-autosuggestions
+    zsh-completions
+    zsh-syntax-highlighting
+)
+
+OPTIONAL_PKGS=(
+    bottom
+    fastfetch
+    sof-firmware
+)
+
+# systemd supersedes base, udev, fsck
+INITRAMFS_HOOKS=(
+    systemd
+    autodetect
+    microcode
+    modconf
+    kms
+    # keyboard
+    # keymap
+    # consolefont
+    block
+    filesystems
+)
+
+KERNEL_PARAMETERS=(
+    root=${ROOT_PARTITION}
+    rw
+    quiet
+    loglevel=3
+    systemd.show_status=auto
+    rd.udev.log_level=3
+)
