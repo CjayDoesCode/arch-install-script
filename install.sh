@@ -23,20 +23,14 @@ SYSTEM_PKGS=(
 )
 
 read -rp 'Install Intel driver packages? (Y/n): ' INPUT
-if [[ ! "$INPUT" =~ ^[nN]$ ]]; then
-    SYSTEM_PKGS+=(${INTEL_DRIVER_PKGS[@]})
-fi
+[[ ! "$INPUT" =~ ^[nN]$ ]] && SYSTEM_PKGS+=(${INTEL_DRIVER_PKGS[@]})
 
 read -rp 'Install AMD driver packages? (Y/n): ' INPUT
-if [[ ! "$INPUT" =~ ^[nN]$ ]]; then
-    SYSTEM_PKGS+=(${AMD_DRIVER_PKGS[@]})
-fi
+[[ ! "$INPUT" =~ ^[nN]$ ]] && SYSTEM_PKGS+=(${AMD_DRIVER_PKGS[@]})
 
 for PKG in ${OPTIONAL_PKGS[@]}; do
     read -rp "Install $PKG? (Y/n): " INPUT
-    if [[ ! "$INPUT" =~ ^[nN]$ ]]; then
-        SYSTEM_PKGS+=($PKG)
-    fi
+    [[ ! "$INPUT" =~ ^[nN]$ ]] && SYSTEM_PKGS+=($PKG)
 done;
 
 # --- synchronize system clock ---
