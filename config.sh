@@ -21,8 +21,12 @@ REFLECTOR_ARGS=(
 BASE_SYSTEM_PKGS=(
     base
     base-devel
+    bash
+    bash-completion
+    fish
     git
     gnupg
+    helix
     linux
     linux-firmware
     linux-headers
