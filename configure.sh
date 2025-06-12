@@ -74,7 +74,7 @@ echo "$USERNAME:$PASSWORD" | chpasswd
 # --- configure zsh ---
 
 echo 'Configuring zsh...'
-cat > /home/$USERNAME/.zshrc <<ZSHRC
+cat << ZSHRC > /home/$USERNAME/.zshrc
 alias ls='ls --color=auto'
 alias ll='ls -lah --color=auto'
 alias grep='grep --color=auto'
@@ -108,21 +108,21 @@ chmod 0440 /etc/sudoers.d/wheel
 
 echo 'Installing systemd-boot...'
 bootctl install
-cat > /boot/loader/loader.conf <<LOADER
+cat << LOADER > /boot/loader/loader.conf
 default        arch.conf
 timeout        0
 console-mode   max
 editor         no
 LOADER
 
-cat > /boot/loader/entries/arch.conf <<ENTRY
+cat << ENTRY > /boot/loader/entries/arch.conf
 title     Arch Linux
 linux     /vmlinuz-linux
 initrd    /initramfs-linux.img
 options   ${KERNEL_PARAMETERS[*]}
 ENTRY
 
-cat > /boot/loader/entries/arch-fallback.conf <<ENTRY
+cat << ENTRY > /boot/loader/entries/arch-fallback.conf
 title     Arch Linux (fallback)
 linux     /vmlinuz-linux
 initrd    /initramfs-linux-fallback.img
