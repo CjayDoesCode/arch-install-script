@@ -61,16 +61,15 @@ echo "HOOKS=(${INITRAMFS_HOOKS[*]})" > /etc/mkinitcpio.conf.d/hooks.conf
 echo 'Regenerating initramfs image...'
 mkinitcpio --allpresets
 
-# --- set password of root ---
-
-echo 'Setting password of root...'
-echo "$PASSWORD" | passwd --stdin root
-
-# --- create user ---
+# --- create new user ---
 
 echo 'Creating user...'
 useradd --groups wheel --create-home --shell /usr/bin/zsh $USERNAME
-echo "$PASSWORD" | passwd --stdin $USERNAME
+
+# --- set password of new user and root ---
+
+echo "root:$PASSWORD" | chpasswd
+echo "$USERNAME:$PASSWORD" | chpasswd
 
 # --- configure zsh ---
 

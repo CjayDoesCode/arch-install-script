@@ -21,7 +21,7 @@ done
 # --- prompt for target disk ---
 
 echo "Available disks:"
-lsblk --noheadings --output NAME,SIZE,MODEL --paths | grep -E '/dev/sda|/dev/nvme0n1'
+lsblk --noheadings --output NAME,SIZE,MODEL --paths | grep --extended-regex '/dev/sda|/dev/nvme0n1'
 
 while true; do
     read -rp "Enter target disk (e.g., /dev/sda): " TARGET_DISK
