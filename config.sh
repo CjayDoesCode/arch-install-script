@@ -4,10 +4,10 @@ LANG=en_US.UTF-8
 HOSTNAME=archlinux
 
 NTP_SERVERS=(
-    0.asia.pool.ntp.org
-    1.asia.pool.ntp.org
-    2.asia.pool.ntp.org
-    3.asia.pool.ntp.org
+    0.pool.ntp.org
+    1.pool.ntp.org
+    2.pool.ntp.org
+    3.pool.ntp.org
 )
 
 REFLECTOR_ARGS=(
