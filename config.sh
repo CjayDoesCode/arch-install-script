@@ -11,10 +11,10 @@ NTP_SERVERS=(
 )
 
 REFLECTOR_ARGS=(
-    '--save /etc/pacman.d/mirrorlist'
-    '--country Singapore'
-    '--fastest 5'
-    '--protocol https'
+    --save /etc/pacman.d/mirrorlist
+    --country Singapore
+    --fastest 5
+    --protocol https
     --ipv4
 )
 
@@ -94,7 +94,7 @@ KERNEL_PARAMETERS=(
     # root=${ROOT_PARTITION}
     rw
     quiet
-    'loglevel=3'
-    'systemd.show_status=auto'
-    'rd.udev.log_level=3'
+    loglevel=3
+    systemd.show_status=auto
+    rd.udev.log_level=3
 )
