@@ -21,9 +21,6 @@ REFLECTOR_ARGS=(
 BASE_SYSTEM_PKGS=(
     base
     base-devel
-    bash
-    bash-completion
-    fish
     git
     gnupg
     helix
@@ -47,18 +44,19 @@ USERSPACE_UTIL_PKGS=(
     ntfs-3g
 )
 
+COMMON_DRIVER_PKGS=(
+    mesa
+    xorg-server
+)
+
 INTEL_DRIVER_PKGS=(
     intel-ucode
-    mesa
     vulkan-intel
-    xorg-server
 )
 
 AMD_DRIVER_PKGS=(
     amd-ucode
-    mesa
     vulkan-radeon
-    xorg-server
 )
 
 PIPEWIRE_PKGS=(

@@ -61,10 +61,12 @@ SYSTEM_PKGS=(
 )
 
 read -rp "Install Intel driver packages? (Y/n): " INPUT
-[[ ! $INPUT =~ ^[nN]$ ]] && SYSTEM_PKGS+=(${INTEL_DRIVER_PKGS[@]})
+[[ ! $INPUT =~ ^[nN]$ ]] && DRIVER_PKGS=(${COMMON_DRIVER_PKGS[@]} ${INTEL_DRIVER_PKGS[@]})
 
 read -rp "Install AMD driver packages? (Y/n): " INPUT
-[[ ! $INPUT =~ ^[nN]$ ]] && SYSTEM_PKGS+=(${AMD_DRIVER_PKGS[@]})
+[[ ! $INPUT =~ ^[nN]$ ]] && DRIVER_PKGS=(${COMMON_DRIVER_PKGS[@]} ${AMD_DRIVER_PKGS[@]})
+
+SYSTEM_PKGS+=(${DRIVER_PKGS[@]})
 
 for PKG in ${OPTIONAL_PKGS[@]}; do
     read -rp "Install $PKG? (Y/n): " INPUT
