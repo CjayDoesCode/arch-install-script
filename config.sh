@@ -1,5 +1,5 @@
 TIME_ZONE=Asia/Manila
-LOCALE='en_US.UTF-8 UTF-8'
+LOCALE="en_US.UTF-8 UTF-8"
 LANG=en_US.UTF-8
 HOSTNAME=archlinux
 
