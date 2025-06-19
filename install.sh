@@ -76,11 +76,8 @@ INSTALL_HYPRLAND=0
 read -rp "Install Hyprland? (Y/n): " INPUT
 if [[ ! $INPUT =~ ^[nN]$ ]]; then
     INSTALL_HYPRLAND=1
-    SYSTEM_PKGS+=(${HYPRLAND_PKGS} ${HYPRLAND_FONT_PKGS})
-    for PKG in ${HYPRLAND_OPTIONAL_PKGS[@]}; do
-        read -rp "Install $PKG? (Y/n): " INPUT
-        [[ ! $INPUT =~ ^[nN]$ ]] && SYSTEM_PKGS+=($PKG)
-    done;
+    SYSTEM_PKGS+=(${HYPRLAND_PKGS[@]} ${HYPRLAND_FONT_PKGS[@]})
+    OPTIONAL_PKGS+=(${HYPRLAND_OPTIONAL_PKGS[@]})
 fi
 
 for PKG in ${OPTIONAL_PKGS[@]}; do
