@@ -8,5 +8,5 @@ Bash scripts to automate the installation of a base Arch Linux system from the l
 ## Usage
 
 ```bash
-curl https://raw.githubusercontent.com/CjayDoesCode/arch-install-scripts/refs/heads/main/install.sh | bash
+bash <(curl https://raw.githubusercontent.com/CjayDoesCode/arch-install-scripts/main/install.sh)
 ```
