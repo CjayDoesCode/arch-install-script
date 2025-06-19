@@ -1,6 +1,10 @@
 #!/bin/bash
 
 set -euo pipefail
+
+curl -O https://raw.githubusercontent.com/CjayDoesCode/arch-install-scripts/refs/heads/main/configure.sh
+curl -O https://raw.githubusercontent.com/CjayDoesCode/arch-install-scripts/refs/heads/main/config.sh
+
 source config.sh
 
 # --- prompt for user credentials ---
@@ -68,6 +72,17 @@ read -rp "Install AMD driver packages? (Y/n): " INPUT
 
 SYSTEM_PKGS+=(${DRIVER_PKGS[@]})
 
+INSTALL_HYPRLAND=0
+read -rp "Install Hyprland? (Y/n): " INPUT
+if [[ ! $INPUT =~ ^[nN]$ ]]; then
+    INSTALL_HYPRLAND=1
+    SYSTEM_PKGS+=(${HYPRLAND_PKGS} ${HYPRLAND_FONT_PKGS})
+    for PKG in ${HYPRLAND_OPTIONAL_PKGS[@]}; do
+        read -rp "Install $PKG? (Y/n): " INPUT
+        [[ ! $INPUT =~ ^[nN]$ ]] && SYSTEM_PKGS+=($PKG)
+    done;
+fi
+
 for PKG in ${OPTIONAL_PKGS[@]}; do
     read -rp "Install $PKG? (Y/n): " INPUT
     [[ ! $INPUT =~ ^[nN]$ ]] && SYSTEM_PKGS+=($PKG)
@@ -133,6 +148,7 @@ KERNEL_PARAMETERS=(root=$ROOT_PARTITION ${KERNEL_PARAMETERS[*]})
 
 USERNAME=$USERNAME
 PASSWORD="$PASSWORD"
+INSTALL_HYPRLAND=$INSTALL_HYPRLAND
 CONFIG
 
 cp configure.sh /mnt/root/

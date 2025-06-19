@@ -118,3 +118,19 @@ systemctl enable reflector.timer
 
 echo "Configuring paccache.timer..."
 systemctl enable paccache.timer
+
+# --- install hyprland ---
+
+[[ $INSTALL_HYPRLAND == 0 ]] && exit 0
+
+xdg-user-dirs-update
+
+systemctl --user enable hyprpaper.service
+systemctl --user enable hyprpolkitagent.service
+systemctl --user enable waybar.service
+systemctl --user enable xdg-user-dirs-update.service
+if [[ -f /usr/lib/systemd/system/lactd.service ]]; then
+  systemctl enable lactd.service
+fi
+
+chezmoi init --apply https://github.com/CjayDoesCode/dotfiles.git

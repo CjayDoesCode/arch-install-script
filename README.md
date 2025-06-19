@@ -7,27 +7,6 @@ Bash scripts to automate the installation of a base Arch Linux system from the l
 
 ## Usage
 
-1. Boot the live environment and connect to the internet.
-2. Download and unzip the repository:
-
 ```bash
-curl -L https://api.github.com/repos/CjayDoesCode/arch-install-scripts/tarball/main | tar -xz
-```
-
-3. Change directory to the repository:
-
-```bash
-cd */
-```
-
-3. Allow `install.sh` to be executed:
-
-```bash
-chmod +x install.sh
-```
-
-4. Run the `install.sh` script:
-
-```bash
-./install.sh
+curl https://raw.githubusercontent.com/CjayDoesCode/arch-install-scripts/refs/heads/main/install.sh | bash
 ```

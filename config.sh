@@ -21,6 +21,8 @@ REFLECTOR_ARGS=(
 BASE_SYSTEM_PKGS=(
     base
     base-devel
+    bash
+    bash-completion
     git
     gnupg
     helix
@@ -72,6 +74,40 @@ OPTIONAL_PKGS=(
     bottom
     fastfetch
     sof-firmware
+)
+
+HYPRLAND_PKGS=(
+    alacritty
+    capitaine-cursors
+    chezmoi
+    fuzzel
+    grim
+    hyprland
+    hyprpaper
+    hyprpolkitagent
+    qt5-wayland
+    qt6-wayland
+    slurp
+    uwsm
+    waybar
+    wl-clipboard
+    xdg-desktop-portal-gtk
+    xdg-desktop-portal-hyprland
+    xdg-user-dirs
+)
+
+HYPRLAND_FONT_PKGS=(
+    adobe-source-code-pro-fonts
+    inter-font
+    ttf-nerd-fonts-symbols
+    ttf-nerd-fonts-symbols-mono
+    ttf-sourcecodepro-nerd
+)
+
+HYPRLAND_OPTIONAL_PKGS=(
+    firefox
+    keepassxc
+    lact
 )
 
 # systemd supersedes base, udev, fsck
