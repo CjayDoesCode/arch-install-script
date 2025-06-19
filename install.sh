@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-curl -O https://raw.githubusercontent.com/CjayDoesCode/arch-install-scripts/refs/heads/main/configure.sh
-curl -O https://raw.githubusercontent.com/CjayDoesCode/arch-install-scripts/refs/heads/main/config.sh
+curl -Os https://raw.githubusercontent.com/CjayDoesCode/arch-install-scripts/refs/heads/main/configure.sh
+curl -Os https://raw.githubusercontent.com/CjayDoesCode/arch-install-scripts/refs/heads/main/config.sh
 
 source config.sh
 
