@@ -129,6 +129,4 @@ systemctl enable lactd.service
 systemctl --user -M $USERNAME@ enable hyprpaper.service
 systemctl --user -M $USERNAME@ enable hyprpolkitagent.service
 systemctl --user -M $USERNAME@ enable waybar.service
-systemctl --user -M $USERNAME@ enable xdg-user-dirs-update.service
-su - $USERNAME -c xdg-user-dirs-update
 su - $USERNAME -c "chezmoi init --apply CjayDoesCode"
