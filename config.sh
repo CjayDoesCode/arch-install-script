@@ -70,24 +70,24 @@ PIPEWIRE_PKGS=(
     wireplumber
 )
 
-OPTIONAL_PKGS=(
-    bottom
-    fastfetch
-    sof-firmware
-)
-
 HYPRLAND_PKGS=(
+    adobe-source-code-pro-fonts
     alacritty
     capitaine-cursors
     chezmoi
+    firefox
     fuzzel
     grim
     hyprland
     hyprpaper
     hyprpolkitagent
+    inter-font
     qt5-wayland
     qt6-wayland
     slurp
+    ttf-nerd-fonts-symbols
+    ttf-nerd-fonts-symbols-mono
+    ttf-sourcecodepro-nerd
     uwsm
     waybar
     wl-clipboard
@@ -96,18 +96,12 @@ HYPRLAND_PKGS=(
     xdg-user-dirs
 )
 
-HYPRLAND_FONT_PKGS=(
-    adobe-source-code-pro-fonts
-    inter-font
-    ttf-nerd-fonts-symbols
-    ttf-nerd-fonts-symbols-mono
-    ttf-sourcecodepro-nerd
-)
-
-HYPRLAND_OPTIONAL_PKGS=(
-    firefox
+OPTIONAL_PKGS=(
+    bottom
+    fastfetch
     keepassxc
     lact
+    sof-firmware
 )
 
 # systemd supersedes base, udev, fsck
