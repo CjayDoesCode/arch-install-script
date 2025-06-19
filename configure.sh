@@ -126,11 +126,9 @@ systemctl enable paccache.timer
 echo "Configuring hyprland..."
 [[ -f /usr/lib/systemd/system/lactd.service ]] && \
 systemctl enable lactd.service
-su - $USERNAME << EOF
-systemctl --user enable hyprpaper.service
-systemctl --user enable hyprpolkitagent.service
-systemctl --user enable waybar.service
-systemctl --user enable xdg-user-dirs-update.service
-xdg-user-dirs-update
-chezmoi init --apply https://github.com/CjayDoesCode/dotfiles.git
-EOF
+systemctl --user -M $USERNAME@ enable hyprpaper.service
+systemctl --user -M $USERNAME@ enable hyprpolkitagent.service
+systemctl --user -M $USERNAME@ enable waybar.service
+systemctl --user -M $USERNAME@ enable xdg-user-dirs-update.service
+su - $USERNAME -c xdg-user-dirs-update
+su - $USERNAME -c chezmoi init --apply CjayDoesCode
