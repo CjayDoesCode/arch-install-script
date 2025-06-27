@@ -241,6 +241,11 @@ printf "Format partitions...\n"
 mkfs.ext4 "${root_partition}"
 mkfs.fat -F 32 "${boot_partition}"
 
+kernel_parameters=(
+    "root=UUID=$(lsblk --noheadings --output UUID "${root_partition}")"
+    "${kernel_parameters[@]}"
+)
+
 # ----- mount file systems -----
 
 printf "Mounting file systems...\n"
@@ -347,11 +352,6 @@ timeout       0
 console-mode  max
 editor        no
 LOADER
-
-kernel_parameters=(
-    "root=UUID=$(lsblk --noheadings --output UUID "${root_partition}")"
-    "${kernel_parameters[@]}"
-)
 
 cat << ENTRY > /boot/loader/entries/arch.conf
 title    Arch Linux
