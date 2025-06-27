@@ -1,207 +1,349 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
-IFS=$'\n\t'
 
-source config.sh
+# ----- configuration -----
 
-# --- prompt for user name and password ---
+editor_pkg="helix"
+create_user="true"
+install_userspace_util_pkgs="true"
+install_driver_pkgs="true"
+install_pipewire_pkgs="true"
 
-read -rp "Enter user name: " USER_NAME
+# ----- variables -----
+
+# variables recommended to change:
+#     - time_zone
+#     - locale
+#     - lang
+#     - hostname
+#     - reflector_args
+
+# https://wiki.archlinux.org/title/Installation_guide#Configure_the_system
+time_zone="Asia/Manila"
+locale="en_US.UTF-8 UTF-8"
+lang="en_US.UTF-8"
+hostname="archlinux"
+
+# https://wiki.archlinux.org/title/Systemd-timesyncd#Configuration
+ntp_servers=(
+    "0.pool.ntp.org"
+    "1.pool.ntp.org"
+    "2.pool.ntp.org"
+    "3.pool.ntp.org"
+)
+
+# https://wiki.archlinux.org/title/Reflector#systemd_service
+reflector_args=(
+    "--save" "/etc/pacman.d/mirrorlist"
+    "--country" "Singapore"
+    "--fastest" "5"
+    "--protocol" "https"
+    "--ipv4"
+)
+
+# pacman-contrib provides paccache.timer
+# reflector provides reflector.timer
+# paccache.timer automatically cleans pacman package cache
+# reflect.timer automatically updates pacman mirror list
+# https://wiki.archlinux.org/title/Pacman#Cleaning_the_package_cache
+# https://wiki.archlinux.org/title/Reflector#systemd_timer
+base_system_pkgs=(
+    "${editor_pkg}"
+    "base"
+    "bash"
+    "bash-completion"
+    "linux"
+    "linux-firmware"
+    "man-db"
+    "man-pages"
+    "networkmanager"
+    "pacman-contrib"
+    "reflector"
+    "sudo"
+    "texinfo"
+)
+
+# inserts either intel_ucode or amd_ucode
+# to base_system_pkgs based on the processor
+# https://wiki.archlinux.org/title/Microcode
+vendor=$(lscpu | grep "Vendor ID" | awk '{print $3}')
+if [[ "${vendor}" == "AuthenticAMD" ]]; then
+    printf "Detected AMD CPU.\n"
+    base_system_pkgs+=("amd-ucode")
+elif [[ "${vendor}" == "GenuineIntel" ]]; then
+    printf "Detected Intel CPU.\n"
+    base_system_pkgs+=("intel-ucode")
+else
+    printf "Unknown CPU vendor: %s\n" "${vendor}"
+    exit 1
+fi
+
+# https://wiki.archlinux.org/title/File_systems#Types_of_file_systems
+userspace_util_pkgs=(
+    "dosfstools" # vfat
+    "e2fsprogs"  # ext3/4
+    "exfatprogs" # exfat
+    "ntfs-3g"    # ntfs
+)
+
+# https://wiki.archlinux.org/title/Xorg#Driver_installation
+common_driver_pkgs=("mesa" "xorg-server")
+intel_driver_pkgs=("vulkan-intel")
+amd_driver_pkgs=("vulkan-radeon")
+
+# https://wiki.archlinux.org/title/PipeWire
+pipewire_pkgs=(
+    "pipewire"
+    "pipewire-alsa"
+    "pipewire-audio"
+    "pipewire-jack"
+    "pipewire-pulse"
+    "wireplumber"
+)
+
+# sof-firmware is usually required for laptops
+# https://wiki.archlinux.org/title/Advanced_Linux_Sound_Architecture#Firmware
+optional_pkgs=(
+    "base-devel"
+    "git"
+    "openssh"
+    "sof-firmware"
+)
+
+# systemd supersedes base, udev, & fsck
+# https://wiki.archlinux.org/title/Mkinitcpio#Common_hooks
+initramfs_hooks=(
+    "systemd"
+    "autodetect"
+    "microcode"
+    "modconf"
+    "kms"
+    "block"
+    "filesystems"
+)
+
+# root parameter added after selecting the target disk
+# https://wiki.archlinux.org/title/Kernel_parameters#Parameter_list
+# https://wiki.archlinux.org/title/Silent_boot#Kernel_parameters
+kernel_parameters=(
+    # root=UUID=${root_partition_uuid}
+    "rw"
+    "quiet"
+    "loglevel=3"
+    "systemd.show_status=auto"
+    "rd.udev.log_level=3"
+)
+
+# ----- prompt for user name and password -----
+
+if [[ "${create_user}" == "true" ]]; then
+    read -rp "Enter user name: " user_name
+    while true; do
+        read -rsp "Enter user password: " user_password && printf "\n"
+        read -rsp "Reenter user password: " reentered_password && printf "\n"
+        [[ "${user_password}" == "${reentered_password}" ]] && break
+        printf "Passwords do not match. Try again.\n"
+    done
+fi
+
+# ----- prompt for root password -----
+
 while true; do
-    read -rsp "Enter user password: " USER_PASSWORD && echo
-    read -rsp "Reenter user password: " REENTERED_PASSWORD && echo
-    [[ "$USER_PASSWORD" == "$REENTERED_PASSWORD" ]] && break
-    echo "Passwords do not match. Try again."
+    read -rsp "Enter root password: " root_password && printf "\n"
+    read -rsp "Reenter root password: " reentered_password && printf "\n"
+    [[ "${root_password}" == "${reentered_password}" ]] && break
+    printf "Passwords do not match. Try again.\n"
 done
 
-# --- prompt for root password ---
+# ----- prompt for target disk -----
+
+printf "Disks:\n"
+lsblk --nodeps --noheadings --output PATH,SIZE,MODEL \
+    | grep -E "^/dev/(sd|nvme|mmcblk)" \
+    | sed "s/^/- /"
 
 while true; do
-    read -rsp "Enter root password: " ROOT_PASSWORD && echo
-    read -rsp "Reenter root password: " REENTERED_PASSWORD && echo
-    [[ "$ROOT_PASSWORD" == "$REENTERED_PASSWORD" ]] && break
-    echo "Passwords do not match. Try again."
-done
-
-# --- prompt for target disk ---
-
-echo "Disks:"
-lsblk --nodeps --noheadings -o PATH,SIZE,MODEL | sed "s/^/- /"
-
-while true; do
-    read -rp "Enter target disk (e.g., /dev/sda): " TARGET_DISK
-    if lsblk --nodeps -o PATH | grep -qx "$TARGET_DISK"; then
-        case "$TARGET_DISK" in
+    read -rp "Enter target disk (e.g., /dev/sda): " target_disk
+    if lsblk --nodeps --output PATH | grep -qx "${target_disk}"; then
+        case "${target_disk}" in
             /dev/sd*)
-                ROOT_PARTITION="${TARGET_DISK}2"
-                BOOT_PARTITION="${TARGET_DISK}1"
+                root_partition="${target_disk}2"
+                boot_partition="${target_disk}1"
                 break
                 ;;
             /dev/nvme*)
-                ROOT_PARTITION="${TARGET_DISK}p2"
-                BOOT_PARTITION="${TARGET_DISK}p1"
+                root_partition="${target_disk}p2"
+                boot_partition="${target_disk}p1"
                 break
                 ;;
             /dev/mmcblk*)
-                ROOT_PARTITION="${TARGET_DISK}p2"
-                BOOT_PARTITION="${TARGET_DISK}p1"
+                root_partition="${target_disk}p2"
+                boot_partition="${target_disk}p1"
                 break
                 ;;
         esac
     fi
-    echo "Invalid disk. Try again."
+    printf "Invalid disk. Try again.\n"
 done
 
-KERNEL_PARAMETERS=(
-    "$(lsblk --noheadings -o UUID $ROOT_PARTITION)"
-    "${KERNEL_PARAMETERS[@]}"
+kernel_parameters=(
+    "root=UUID=$(lsblk --noheadings --output UUID "${root_partition}")"
+    "${kernel_parameters[@]}"
 )
 
-# --- prompt for swap file size ---
+# ----- prompt for swap file size -----
 
 while true; do
-    read -rp "Enter swap file size (e.g., 4GiB): " SWAP_FILE_SIZE
-    [[ "$SWAP_FILE_SIZE" =~ ^[0-9]+GiB$ ]] && break
-    echo "Invalid swap file size. Try again."
+    read -rp "Enter swap file size (e.g., 4GiB): " swap_file_size
+    [[ "${swap_file_size}" =~ ^[0-9]+GiB$ ]] && break
+    printf "Invalid swap file size. Try again.\n"
 done
 
-# --- prompt for system packages ---
+# ----- prompt for system packages -----
 
-SYSTEM_PKGS=(
-    "${BASE_SYSTEM_PKGS[@]}"
-    "${USERSPACE_UTIL_PKGS[@]}"
-    "${COMMON_DRIVER_PKGS}"
-    "${PIPEWIRE_PKGS[@]}"
-)
+system_pkgs=("${base_system_pkgs[@]}")
+[[ "${install_userspace_util_pkgs}" == "true" ]] \
+    && system_pkgs+=("${userspace_util_pkgs[@]}")
+[[ "${install_pipewire_pkgs}" == "true" ]] \
+    && system_pkgs+=("${pipewire_pkgs[@]}")
 
-read -rp "Install Intel driver packages? [Y/n]: " INPUT
-[[ ! "$INPUT" =~ ^[Nn]$ ]] && SYSTEM_PKGS+=("${INTEL_DRIVER_PKGS[@]}")
+if [[ "${install_driver_pkgs}" == "true" ]]; then
+    system_pkgs+=("${common_driver_pkgs[@]}")
+    
+    read -rp "Install Intel driver packages? [Y/n]: " input
+    [[ ! "${input}" =~ ^[Nn]$ ]] && system_pkgs+=("${intel_driver_pkgs[@]}")
 
-read -rp "Install AMD driver packages? [Y/n]: " INPUT
-[[ ! "$INPUT" =~ ^[Nn]$ ]] && SYSTEM_PKGS+=("${AMD_DRIVER_PKGS[@]}")
+    read -rp "Install AMD driver packages? [Y/n]: " input
+    [[ ! "${input}" =~ ^[Nn]$ ]] && system_pkgs+=("${amd_driver_pkgs[@]}")
 
-for PKG in "${OPTIONAL_PKGS[@]}"; do
-    read -rp "Install $PKG? [Y/n]: " INPUT
-    [[ ! "$INPUT" =~ ^[Nn]$ ]] && SYSTEM_PKGS+=("$PKG")
-done
+    for pkg in "${optional_pkgs[@]}"; do
+        read -rp "Install ${pkg}? [Y/n]: " input
+        [[ ! "${input}" =~ ^[Nn]$ ]] && system_pkgs+=("${pkg}")
+    done
+fi
 
-# --- synchronize system clock ---
+# ----- synchronize system clock -----
 
-echo "Synchronizing system clock..."
-sed -i "s/#NTP=/NTP=${NTP_SERVERS[@]}/" /etc/systemd/timesyncd.conf
+printf "Synchronizing system clock...\n"
+sed -i "s/#NTP=/NTP=${ntp_servers[*]}/" /etc/systemd/timesyncd.conf
 systemctl restart systemd-timesyncd.service && sleep 5
 
-# --- partition disk, format partitions, mount file systems ---
+# ----- partition disk -----
 
-echo "Partitioning disk..."
-echo -e "size=1GiB, type=uefi\n type=linux" | \
-sfdisk --wipe always --wipe-partitions always --label gpt "$TARGET_DISK"
+# Layout (UEFI/GPT):
+#     Mount point  Partition type         Size
+#     /boot        EFI system partition   1 GiB
+#     /            Linux x86-64 root (/)  Remainder of the device
 
-echo "Format partitions..."
-mkfs.ext4 "$ROOT_PARTITION"
-mkfs.fat -F 32 "$BOOT_PARTITION"
+printf "Partitioning disk...\n"
+printf "size=1GiB, type=uefi\n type=linux\n" | \
+    sfdisk --wipe always --wipe-partitions always --label gpt "${target_disk}"
 
-echo "Mounting file systems..."
-mount "$ROOT_PARTITION" /mnt
-mount --mkdir "$BOOT_PARTITION" /mnt/boot
+# ----- format partitions -----
 
-# --- update mirror list ---
+printf "Format partitions...\n"
+mkfs.ext4 "${root_partition}"
+mkfs.fat -F 32 "${boot_partition}"
 
-echo "Updating mirror list..."
-reflector "${REFLECTOR_ARGS[@]}"
+# ----- mount file systems -----
 
-# --- install base system packages ---
+printf "Mounting file systems...\n"
+mount "${root_partition}" /mnt
+mount --mkdir "${boot_partition}" /mnt/boot
 
-echo "Installing base system packages..."
-pacstrap -K /mnt "${SYSTEM_PKGS[@]}"
+# ----- update mirror list -----
 
-# --- configure new system ---
+printf "Updating mirror list...\n"
+reflector "${reflector_args[@]}"
 
-echo "Generating file systems table..."
+# ----- install base system packages -----
+
+printf "Installing base system packages...\n"
+pacstrap -K /mnt "${system_pkgs[@]}"
+
+# ----- configure new system -----
+
+printf "Generating file systems table...\n"
 genfstab -U /mnt >> /mnt/etc/fstab
 
-echo "Changing root to new system..."
-
+printf "Changing root to new system...\n"
 arch-chroot /mnt /bin/bash << CONFIGURE
 
-# --- create swap file ---
+set -euo pipefail
 
-echo "Creating swap file..."
-mkswap --file /swapfile --uuid clear --size "$SWAP_FILE_SIZE"
-echo "/swapfile none swap defaults 0 0" >> /etc/fstab
+# ----- create swap file -----
 
-# --- set time zone ---
+printf "Creating swap file...\n"
+mkswap --file /swapfile --uuid clear --size "${swap_file_size}"
+printf "/swapfile none swap defaults 0 0\n" >> /etc/fstab
 
-echo "Setting time zone..."
-ln -sf "/usr/share/zoneinfo/$TIME_ZONE" /etc/localtime
+# ----- set time zone, set hardware clock, & set up time synchronization -----
 
-# --- set hardware clock ---
+printf "Setting time zone...\n"
+ln --force --symbolic "/usr/share/zoneinfo/${time_zone}" /etc/localtime
 
-echo "Setting hardware clock..."
+printf "Setting hardware clock...\n"
 hwclock --systohc
 
-# --- set up time synchronization ---
-
-echo "Setting up time synchronization..."
+printf "Setting up time synchronization...\n"
 systemctl enable systemd-timesyncd.service
 mkdir /etc/systemd/timesyncd.conf.d
-echo -e "[Time]\nNTP=${NTP_SERVERS[@]}" > /etc/systemd/timesyncd.conf.d/ntp.conf
+printf "[Time]\nNTP=%s\n" "${ntp_servers[*]}" > \
+    /etc/systemd/timesyncd.conf.d/ntp.conf
 
-# --- set locale ---
+# ----- set locale -----
 
-echo "Setting locale..."
-sed -i "/#$LOCALE/s/#//" /etc/locale.gen && locale-gen
-echo "LANG=$LANG" > /etc/locale.conf
+printf "Setting locale...\n"
+sed -i "/#${locale}/s/#//" /etc/locale.gen && locale-gen
+printf "LANG=%s\n" "${lang}" > /etc/locale.conf
 
-# --- set hostname ---
+# ----- set hostname, set hosts, & set up network manager -----
 
-echo "Setting hostname..."
-echo "$HOSTNAME" > /etc/hostname
+printf "Setting hostname...\n"
+printf "%s\n" "${hostname}" > /etc/hostname
 
-# --- set hosts ---
-
-echo "Setting hosts..."
+printf "Setting hosts...\n"
 cat << HOSTS > /etc/hosts
 127.0.0.1  localhost
 ::1        localhost
-127.0.1.1  $HOSTNAME.localdomain  $HOSTNAME
+127.0.1.1  ${hostname}.localdomain  ${hostname}
 HOSTS
 
-# --- set up network manager ---
-
-echo "Setting up Network Manager..."
+printf "Setting up Network Manager...\n"
 systemctl enable NetworkManager.service
 
-# --- configure mkinitcpio ---
+# ----- configure mkinitcpio & regenerate initramfs image -----
 
-echo "Configuring mkinitcpio..."
-echo "HOOKS=(${INITRAMFS_HOOKS[@]})" > /etc/mkinitcpio.conf.d/hooks.conf
+printf "Configuring mkinitcpio...\n"
+printf "HOOKS=(%s)\n" "${initramfs_hooks[*]}" > \
+    /etc/mkinitcpio.conf.d/hooks.conf
 
-# --- regenerate initramfs image ---
-
-echo "Regenerating initramfs image..."
+printf "Regenerating initramfs image...\n"
 mkinitcpio --allpresets
 
-# --- create new user ---
+# ----- create new user -----
 
-echo "Creating user..."
-useradd --groups wheel --create-home --shell /usr/bin/bash "$USER_NAME"
+if [[ "${create_user}" == "true" ]]; then
+    printf "Creating user...\n"
+    useradd --groups wheel --create-home --shell /usr/bin/bash "${user_name}"
+    printf "%s:%s\n" "${user_name}" "${user_password}" | chpasswd
+fi
 
-# --- set password of new user and root ---
+# ----- set root password -----
 
-echo "root:$ROOT_PASSWORD" | chpasswd
-echo "$USER_NAME:$USER_PASSWORD" | chpasswd
+printf "Setting root password...\n"
+printf "root:%s\n" "${root_password}" | chpasswd
 
-# --- configure sudo ---
+# ----- configure sudo -----
 
-echo "Configuring sudo..."
-echo "%wheel ALL=(ALL) ALL" > /etc/sudoers.d/wheel
+printf "Configuring sudo...\n"
+printf "%%wheel ALL=(ALL) ALL\n" > /etc/sudoers.d/wheel
 chmod 0440 /etc/sudoers.d/wheel
 
-# --- install systemd-boot ---
+# ----- install systemd-boot -----
 
-echo "Installing systemd-boot..."
+printf "Installing systemd-boot...\n"
 bootctl install
 
 cat << LOADER > /boot/loader/loader.conf
@@ -215,40 +357,34 @@ cat << ENTRY > /boot/loader/entries/arch.conf
 title    Arch Linux
 linux    /vmlinuz-linux
 initrd   /initramfs-linux.img
-options  ${KERNEL_PARAMETERS[@]}
+options  ${kernel_parameters[*]}
 ENTRY
 
 cat << ENTRY > /boot/loader/entries/arch-fallback.conf
 title    Arch Linux (fallback)
 linux    /vmlinuz-linux
 initrd   /initramfs-linux-fallback.img
-options  ${KERNEL_PARAMETERS[@]}
+options  ${kernel_parameters[*]}
 ENTRY
 
-# --- configure pacman ---
+# ----- configure pacman, reflector, & paccache -----
 
-echo "Configuring pacman..."
+printf "Configuring pacman...\n"
 sed -i "/#Color/s/#//" /etc/pacman.conf
 
-# --- configure reflector ---
-
-echo "Configuring reflector..."
-echo "${REFLECTOR_ARGS[@]}" > /etc/xdg/reflector/reflector.conf
+printf "Configuring reflector...\n"
+printf "%s\n" "${reflector_args[*]}"  > /etc/xdg/reflector/reflector.conf
 systemctl enable reflector.timer
 
-# --- configure paccache ---
-
-echo "Configuring paccache.timer..."
+printf "Configuring paccache.timer...\n"
 systemctl enable paccache.timer
 
 CONFIGURE
 
-# --- unmount partitions ---
+# ----- unmount partitions & prompt for reboot -----
 
-echo "Unmounting partitions..."
+printf "Unmounting partitions...\n"
 umount --recursive /mnt
 
-# --- prompt for reboot ---
-
-read -rp "Installation completed. Reboot now? [Y/n]: " INPUT
-[[ ! "$INPUT" =~ ^[nN]$ ]] && reboot
+read -rp "Installation completed. Reboot now? [Y/n]: " input
+[[ ! "${input}" =~ ^[nN]$ ]] && reboot
