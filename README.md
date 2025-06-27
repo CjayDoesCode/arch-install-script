@@ -6,8 +6,5 @@ Bash scripts for automating the installation of a base Arch Linux system from th
 
 ```bash
 curl -L "https://api.github.com/repos/CjayDoesCode/arch-install-script/tarball" | tar -xz
-cd CjayDoesCode-arch-install-scripts-*
-chmod +x install.sh
-./install.sh
 ```
 
