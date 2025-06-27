@@ -303,13 +303,6 @@ printf "LANG=%s\n" "${lang}" > /etc/locale.conf
 printf "Setting hostname...\n"
 printf "%s\n" "${hostname}" > /etc/hostname
 
-printf "Setting hosts...\n"
-cat << HOSTS > /etc/hosts
-127.0.0.1  localhost
-::1        localhost
-127.0.1.1  ${hostname}.localdomain  ${hostname}
-HOSTS
-
 printf "Setting up Network Manager...\n"
 systemctl enable NetworkManager.service
 
