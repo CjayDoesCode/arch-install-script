@@ -123,7 +123,7 @@ initramfs_hooks=(
     "filesystems"
 )
 
-# root parameter added after selecting the target disk
+# root parameter inserted later
 # https://wiki.archlinux.org/title/Kernel_parameters#Parameter_list
 # https://wiki.archlinux.org/title/Silent_boot#Kernel_parameters
 kernel_parameters=(
@@ -186,11 +186,6 @@ while true; do
     fi
     printf "Invalid disk. Try again.\n"
 done
-
-kernel_parameters=(
-    "root=UUID=$(lsblk --noheadings --output UUID "${root_partition}")"
-    "${kernel_parameters[@]}"
-)
 
 # ----- prompt for swap file size -----
 
@@ -352,6 +347,11 @@ timeout       0
 console-mode  max
 editor        no
 LOADER
+
+kernel_parameters=(
+    "root=UUID=$(lsblk --noheadings --output UUID "${root_partition}")"
+    "${kernel_parameters[@]}"
+)
 
 cat << ENTRY > /boot/loader/entries/arch.conf
 title    Arch Linux
