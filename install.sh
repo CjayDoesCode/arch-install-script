@@ -384,11 +384,6 @@ printf "Configuring paccache.timer...\n"
 systemctl enable paccache.timer
 CONFIGURE
 
-# ----- unmount partitions -----
-
-printf "Unmounting partitions...\n"
-umount --recursive /mnt
-
 # ----- prompt for reboot -----
 
 read -rp "Installation completed. Reboot now? [Y/n]: " input
