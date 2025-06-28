@@ -146,7 +146,7 @@ done
 
 # ----- prompt for target disk -----
 
-get_disks () {
+get_disks() {
   lsblk --nodeps --noheadings --output PATH,SIZE,MODEL |
     grep --extended-regexp "^/dev/(sd|nvme|mmcblk)"
 }
