@@ -123,7 +123,7 @@ kernel_parameters=(
   "rd.udev.log_level=3"
 )
 
-# ----- prompt for user name and password -----
+# ----- prompt for user name & password -----
 
 if [[ "${create_user}" == "true" ]]; then
   read -rp "Enter user name: " user_name
