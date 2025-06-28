@@ -156,7 +156,7 @@ get_disks | sed "s/^/- /"
 
 while true; do
   read -rp "Enter target disk (e.g., /dev/sda): " target_disk
-  if get_disks | grep --quiet "^${target_disk}"; then
+  if get_disks | grep --word-regexp --quiet "^${target_disk}"; then
     case "${target_disk}" in
     /dev/sd*)
       root_partition="${target_disk}2"
