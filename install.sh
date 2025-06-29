@@ -5,6 +5,7 @@ set -euo pipefail
 # ----- configuration -----
 
 editor_pkg="helix"
+silent_boot="true"
 create_user="true"
 create_swap_file="true"
 install_userspace_util_pkgs="true"
@@ -40,10 +41,6 @@ reflector_args=(
   "--ipv4"
 )
 
-# `pacman-contrib` provides `paccache.timer`
-# `reflector` provides `reflector.timer`
-# `paccache.timer` automatically cleans pacman package cache
-# `reflect.timer` automatically updates pacman mirror list
 base_system_pkgs=(
   # "intel_ucode" | "amd_ucode"
   "${editor_pkg}"
@@ -117,11 +114,16 @@ initramfs_hooks=(
 kernel_parameters=(
   # root=UUID=${root_partition_uuid}
   "rw"
-  "quiet"
-  "loglevel=3"
-  "systemd.show_status=auto"
-  "rd.udev.log_level=3"
 )
+
+if [[ "${silent_boot}" == "true" ]]; then
+  kernel_parameters+=(
+    "quiet"
+    "loglevel=3"
+    "systemd.show_status=auto"
+    "rd.udev.log_level=3"
+  )
+fi
 
 # ----- prompt for user name & password -----
 
@@ -234,7 +236,7 @@ printf "Format partitions...\n"
 mkfs.ext4 "${root_partition}"
 mkfs.fat -F 32 "${boot_partition}"
 
-root_partition_uuid=$(lsblk --noheadings --output UUID "${root_partition}")
+root_partition_uuid="$(lsblk --noheadings --output UUID "${root_partition}")"
 kernel_parameters=(
   "root=UUID=${root_partition_uuid}"
   "${kernel_parameters[@]}"
