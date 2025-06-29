@@ -42,13 +42,13 @@ chmod +x install.sh
 
 | Group                 | Packages                                                                                                                                                                  |
 | :-------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| base_system_pkgs      | intel-ucode\|amd_ucode, ${editor_pkg}, base, bash, bash-completion, linux, linux-firmware, man-db, man-pages, networkmanager, pacman-contrib, reflector, sudo, texinfo     |
-| userspace_util_pkgs   | dosfstools, e2fsprogs, exfatprogs, ntfs-3g                                                                                                                                |
-| common_driver_pkgs    | mesa, xorg-server                                                                                                                                                         |
+| base_system_pkgs      | intel-ucode\|amd_ucode ${editor_pkg} base bash bash-completion linux linux-firmware man-db man-pages networkmanager pacman-contrib reflector sudo texinfo                 |
+| userspace_util_pkgs   | dosfstools e2fsprogs exfatprogs ntfs-3g                                                                                                                                   |
+| common_driver_pkgs    | mesa xorg-server                                                                                                                                                          |
 | intel_driver_pkgs     | vulkan-intel                                                                                                                                                              |
 | amd_driver_pkgs       | vulkan-radeon                                                                                                                                                             |
-| pipewire_pkgs         | pipewire, pipewire-alsa, pipewire-audio, pipewire-jack, pipewire-pulse, wireplumber                                                                                       |
-| optional_pkgs         | base-devel, git, openssh, sof-firmware                                                                                                                                    |
+| pipewire_pkgs         | pipewire pipewire-alsa pipewire-audio pipewire-jack pipewire-pulse wireplumber                                                                                            |
+| optional_pkgs         | base-devel git openssh sof-firmware                                                                                                                                       |
 
 ## Partition Layout (UEFI/GPT)
 
