@@ -394,7 +394,7 @@ ENTRY
 
 # configure pacman
 printf "Configuring pacman...\n"
-sed -i "/^#Color/s/^#//" /etc/pacman.conf
+sed -i --regexp-extended "/^#(Color|VerbosePkgLists)/s/^#//" /etc/pacman.conf
 
 # set up reflector
 printf "Setting up reflector...\n"
