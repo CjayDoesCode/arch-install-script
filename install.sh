@@ -2,23 +2,36 @@
 
 set -euo pipefail
 
-# -----------------------
-#      configuration
-# -----------------------
+# ------------------------------------------------------------------------------
+#   configuration
+# ------------------------------------------------------------------------------
 
-editor_pkg="helix" # package for the console text editor
-silent_boot="true" # include silent boot kernel parameters
-
-create_user="true"      # create a user
-create_swap_file="true" # create a swap file
-
+editor_pkg="helix"                 # package for the console text editor
+silent_boot="true"                 # include silent boot kernel parameters
+create_user="true"                 # create a user
+create_swap_file="true"            # create a swap file
 install_userspace_util_pkgs="true" # install userspace utilities
 install_driver_pkgs="true"         # install video drivers
 install_pipewire_pkgs="true"       # install PipeWire
 
-# -------------------
-#      variables
-# -------------------
+# ------------------------------------------------------------------------------
+#   variables
+# ------------------------------------------------------------------------------
+
+target_disk=""
+root_partition=""
+boot_partition=""
+root_partition_uuid=""
+swap_file_size=""
+country=""
+system_pkgs=()
+time_zone=""
+locale=""
+lang=""
+hostname=""
+user_name=""
+user_password=""
+root_password=""
 
 ntp_servers=(
   "0.pool.ntp.org"
@@ -50,19 +63,22 @@ base_system_pkgs=(
   "texinfo"
 )
 
-# inserts either amd-ucode or intel-ucode
+# insert either amd-ucode or intel-ucode
 # into base_system_pkgs based on the processor
-vendor=$(lscpu | grep "Vendor ID" | awk '{print $3}')
-if [[ "${vendor}" == "AuthenticAMD" ]]; then
+case "$(lscpu | grep "Vendor ID" | awk '{print $3}')" in
+AuthenticAMD)
   printf "Detected AMD CPU.\n"
   base_system_pkgs+=("amd-ucode")
-elif [[ "${vendor}" == "GenuineIntel" ]]; then
+  ;;
+GenuineIntel)
   printf "Detected Intel CPU.\n"
   base_system_pkgs+=("intel-ucode")
-else
-  printf "Unknown CPU vendor: %s\n" "${vendor}"
+  ;;
+*)
+  printf "Unknown CPU vendor.\n"
   exit 1
-fi
+  ;;
+esac
 
 userspace_util_pkgs=(
   "dosfstools" # vfat
@@ -92,7 +108,7 @@ optional_pkgs=(
 )
 
 # systemd supersedes base, udev, & fsck
-initramfs_hooks=(
+mkinitcpio_hooks=(
   "systemd"
   "autodetect"
   "microcode"
@@ -102,18 +118,117 @@ initramfs_hooks=(
   "filesystems"
 )
 
+# root parameter inserted after
+# root partition is formatted
 kernel_parameters=(
   # root=UUID=${root_partition_uuid}
   "rw"
 )
 
+silent_boot_kernel_parameters=(
+  "quiet"
+  "loglevel=3"
+  "systemd.show_status=auto"
+  "rd.udev.log_level=3"
+)
+
 if [[ "${silent_boot}" == "true" ]]; then
-  kernel_parameters+=(
-    "quiet"
-    "loglevel=3"
-    "systemd.show_status=auto"
-    "rd.udev.log_level=3"
-  )
+  kernel_parameters+=("${silent_boot_kernel_parameters[@]}")
+fi
+
+# ------------------------------------------------------------------------------
+#   functions
+# ------------------------------------------------------------------------------
+
+list_disks() {
+  lsblk --nodeps --noheadings --output PATH,SIZE,MODEL |
+    grep --extended-regexp "^/dev/(sd|nvme|mmcblk)"
+}
+
+list_countries() {
+  reflector --list-countries |
+    awk '{$NF=""; $(NF-1)=""; print $0}' |
+    sed "1,2d" |
+    sed "s/[[:space:]]*$//"
+}
+
+# ------------------------------------------------------------------------------
+#   user input
+# ------------------------------------------------------------------------------
+
+# target_disk, root_partition, & boot_partition
+printf "Disks:\n"
+list_disks | sed "s/^/- /"
+
+while true; do
+  read -rp "Enter target disk (e.g., \"/dev/sda\"): " target_disk
+  if list_disks | grep --quiet "^${target_disk}\b"; then
+    case "${target_disk}" in
+    /dev/sd*)
+      root_partition="${target_disk}2"
+      boot_partition="${target_disk}1"
+      break
+      ;;
+    /dev/nvme*)
+      root_partition="${target_disk}p2"
+      boot_partition="${target_disk}p1"
+      break
+      ;;
+    /dev/mmcblk*)
+      root_partition="${target_disk}p2"
+      boot_partition="${target_disk}p1"
+      break
+      ;;
+    esac
+  fi
+  printf "Invalid disk. Try again.\n"
+done
+
+# swap_file_size
+if [[ "${create_swap_file}" == "true" ]]; then
+  while true; do
+    read -rp "Enter swap file size (e.g., \"8GiB\"): " swap_file_size
+    [[ "${swap_file_size}" =~ ^[0-9]+GiB$ ]] && break
+    printf "Invalid swap file size. Try again.\n"
+  done
+fi
+
+# country
+printf "Enter a country to use as filter for reflector.\n"
+printf "Enter 'l' to list countries. Enter 'q' to exit.\n"
+
+while true; do
+  read -rp "Enter a country (e.g., \"Japan\"): " country
+  if [[ "${country}" == "l" ]]; then
+    list_countries | less
+  elif list_countries | grep --quiet "^${country}$"; then
+    reflector_args+=("--country" "${country}")
+    break
+  else
+    printf "Invalid country. Try again.\n"
+  fi
+done
+
+# system_pkgs
+system_pkgs=("${base_system_pkgs[@]}")
+[[ "${install_userspace_util_pkgs}" == "true" ]] &&
+  system_pkgs+=("${userspace_util_pkgs[@]}")
+[[ "${install_pipewire_pkgs}" == "true" ]] &&
+  system_pkgs+=("${pipewire_pkgs[@]}")
+
+if [[ "${install_driver_pkgs}" == "true" ]]; then
+  system_pkgs+=("${common_driver_pkgs[@]}")
+
+  read -rp "Install Intel driver packages? [Y/n]: " input
+  [[ ! "${input}" =~ ^[nN]$ ]] && system_pkgs+=("${intel_driver_pkgs[@]}")
+
+  read -rp "Install AMD driver packages? [Y/n]: " input
+  [[ ! "${input}" =~ ^[nN]$ ]] && system_pkgs+=("${amd_driver_pkgs[@]}")
+
+  for pkg in "${optional_pkgs[@]}"; do
+    read -rp "Install ${pkg}? [Y/n]: " input
+    [[ ! "${input}" =~ ^[nN]$ ]] && system_pkgs+=("${pkg}")
+  done
 fi
 
 # time_zone
@@ -148,30 +263,6 @@ done
 # hostname
 read -rp "Enter hostname (e.g., archlinux): " hostname
 
-# country
-list_countries() {
-  reflector --list-countries \
-    | awk '{$NF=""; $(NF-1)=""; print $0}' \
-    | sed "1,2d" \
-    | sed "s/[[:space:]]*$//"
-}
-
-printf "Enter a country to use as filter for the pacman mirror list.\n"
-printf "Enter 'l' to list countries. Enter 'q' to exit.\n"
-
-while true; do
-  read -rp "Enter a country (e.g., \"Japan\"): " country
-  if [[ "${country}" == "l" ]]; then
-    list_countries | less
-  elif list_countries | grep --quiet "^${country}$"; then
-    break
-  else
-    printf "Invalid country. Try again.\n"
-  fi
-done
-
-reflector_args+=("--country" "${country}")
-
 # user_name & user_password
 if [[ "${create_user}" == "true" ]]; then
   read -rp "Enter user name: " user_name
@@ -191,73 +282,9 @@ while true; do
   printf "Passwords do not match. Try again.\n"
 done
 
-# target_disk, root_partition, & boot_partition
-list_disks() {
-  lsblk --nodeps --noheadings --output PATH,SIZE,MODEL \
-    | grep --extended-regexp "^/dev/(sd|nvme|mmcblk)"
-}
-
-printf "Disks:\n"
-list_disks | sed "s/^/- /"
-
-while true; do
-  read -rp "Enter target disk (e.g., \"/dev/sda\"): " target_disk
-  if list_disks | grep --quiet "^${target_disk}\b"; then
-    case "${target_disk}" in
-    /dev/sd*)
-      root_partition="${target_disk}2"
-      boot_partition="${target_disk}1"
-      break
-      ;;
-    /dev/nvme*)
-      root_partition="${target_disk}p2"
-      boot_partition="${target_disk}p1"
-      break
-      ;;
-    /dev/mmcblk*)
-      root_partition="${target_disk}p2"
-      boot_partition="${target_disk}p1"
-      break
-      ;;
-    esac
-  fi
-  printf "Invalid disk. Try again.\n"
-done
-
-# swap_file_size
-if [[ "${create_swap_file}" == "true" ]]; then
-  while true; do
-    read -rp "Enter swap file size (e.g., \"4GiB\"): " swap_file_size
-    [[ "${swap_file_size}" =~ ^[0-9]+GiB$ ]] && break
-    printf "Invalid swap file size. Try again.\n"
-  done
-fi
-
-# system_pkgs
-system_pkgs=("${base_system_pkgs[@]}")
-[[ "${install_userspace_util_pkgs}" == "true" ]] &&
-  system_pkgs+=("${userspace_util_pkgs[@]}")
-[[ "${install_pipewire_pkgs}" == "true" ]] &&
-  system_pkgs+=("${pipewire_pkgs[@]}")
-
-if [[ "${install_driver_pkgs}" == "true" ]]; then
-  system_pkgs+=("${common_driver_pkgs[@]}")
-
-  read -rp "Install Intel driver packages? [Y/n]: " input
-  [[ ! "${input}" =~ ^[nN]$ ]] && system_pkgs+=("${intel_driver_pkgs[@]}")
-
-  read -rp "Install AMD driver packages? [Y/n]: " input
-  [[ ! "${input}" =~ ^[nN]$ ]] && system_pkgs+=("${amd_driver_pkgs[@]}")
-
-  for pkg in "${optional_pkgs[@]}"; do
-    read -rp "Install ${pkg}? [Y/n]: " input
-    [[ ! "${input}" =~ ^[nN]$ ]] && system_pkgs+=("${pkg}")
-  done
-fi
-
-# --------------------------
-#      pre-installation
-# --------------------------
+# ------------------------------------------------------------------------------
+#   pre-installation
+# ------------------------------------------------------------------------------
 
 # synchronize system clock
 printf "Synchronizing system clock...\n"
@@ -274,6 +301,7 @@ printf "Formatting partitions...\n"
 mkfs.ext4 "${root_partition}"
 mkfs.fat -F 32 "${boot_partition}"
 
+# insert root parameter into kernel parameters
 root_partition_uuid="$(lsblk --noheadings --output UUID "${root_partition}")"
 kernel_parameters=(
   "root=UUID=${root_partition_uuid}"
@@ -292,9 +320,9 @@ if [[ "${create_swap_file}" == "true" ]]; then
   swapon /mnt/swapfile
 fi
 
-# ----------------------
-#      installation
-# ----------------------
+# ------------------------------------------------------------------------------
+#   installation
+# ------------------------------------------------------------------------------
 
 # update mirror list
 printf "Updating mirror list...\n"
@@ -303,10 +331,6 @@ reflector "${reflector_args[@]}"
 # install base system packages
 printf "Installing base system packages...\n"
 pacstrap -K /mnt "${system_pkgs[@]}"
-
-# ------------------------------
-#      system configuration
-# ------------------------------
 
 # generate file systems table
 printf "Generating file systems table...\n"
@@ -347,7 +371,7 @@ systemctl enable NetworkManager.service
 
 # configure mkinitcpio
 printf "Configuring mkinitcpio...\n"
-printf "HOOKS=(%s)\n" "${initramfs_hooks[*]}" > \
+printf "HOOKS=(%s)\n" "${mkinitcpio_hooks[*]}" > \
   /etc/mkinitcpio.conf.d/hooks.conf
 
 # regenerate initramfs image
@@ -412,9 +436,9 @@ printf "Enabling paccache timer...\n"
 systemctl enable paccache.timer
 CONFIGURE
 
-# ---------------------------
-#      post-installation
-# ---------------------------
+# ------------------------------------------------------------------------------
+#   post-installation
+# ------------------------------------------------------------------------------
 
 # reboot
 read -rp "Installation completed. Reboot now? [Y/n]: " input
