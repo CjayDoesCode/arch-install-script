@@ -13,7 +13,7 @@ The purpose of this script is to automate the installation of a base Arch Linux 
 
 1. Download the script.
 ```bash
-curl -L "https://raw.githubusercontent.com/CjayDoesCode/arch-install-script/main/install.sh"
+curl -OL "https://raw.githubusercontent.com/CjayDoesCode/arch-install-script/main/install.sh"
 ```
 
 2. Add executable permissions.
