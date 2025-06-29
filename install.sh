@@ -4,13 +4,13 @@ set -euo pipefail
 
 # ----- configuration -----
 
-editor_pkg="helix"
-silent_boot="true"
-create_user="true"
-create_swap_file="true"
-install_userspace_util_pkgs="true"
-install_driver_pkgs="true"
-install_pipewire_pkgs="true"
+editor_pkg="helix"                 # Package for the console text editor.
+silent_boot="true"                 # Include silent boot kernel parameters.
+create_user="true"                 # Create a user.
+create_swap_file="true"            # Create a swap file.
+install_userspace_util_pkgs="true" # Install userspace utilities.
+install_driver_pkgs="true"         # Install video drivers.
+install_pipewire_pkgs="true"       # Install PipeWire.
 
 # ----- variables -----
 
