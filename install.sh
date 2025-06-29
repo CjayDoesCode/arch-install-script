@@ -123,10 +123,11 @@ while true; do
   read -rp "Enter time zone (e.g., \"Asia/Tokyo\"): " time_zone
   if [[ "${time_zone}" == "l" ]]; then
     timedatectl list-timezones | less
-  elif timedatectl list-timezones | grep -xq "${time_zone}"; then
+  elif timedatectl list-timezones | grep --quiet "^${time_zone}"; then
     break
+  else
+    printf "Invalid time zone. Try again.\n"
   fi
-  printf "Invalid time zone. Try again.\n"
 done
 
 # locale & lang
@@ -136,11 +137,12 @@ while true; do
   read -rp "Enter locale (e.g., \"en_US.UTF-8 UTF-8\"): " locale
   if [[ "${locale}" == "l" ]]; then
     less /usr/share/i18n/SUPPORTED
-  elif grep -xq "${locale}" /usr/share/i18n/SUPPORTED; then
+  elif grep --quiet "^${locale}" /usr/share/i18n/SUPPORTED; then
     lang="$(printf "%s\n" "${locale}" | awk '{print $1}')"
     break
+  else
+    printf "Invalid locale. Try again.\n"
   fi
-  printf "Invalid locale. Try again.\n"
 done
 
 # hostname
@@ -158,10 +160,11 @@ while true; do
   read -rp "Enter a country (e.g., \"Japan\"): " country
   if [[ "${country}" == "l" ]]; then
     list_countries | less
-  elif list_countries | grep -xq "${country}"; then
+  elif list_countries | grep --quiet "^${country}"; then
     break
+  else
+    printf "Invalid country. Try again.\n"
   fi
-  printf "Invalid country. Try again.\n"
 done
 
 reflector_args+=("--country" "${country}")
