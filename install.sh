@@ -123,7 +123,7 @@ while true; do
   read -rp "Enter time zone (e.g., \"Asia/Tokyo\"): " time_zone
   if [[ "${time_zone}" == "l" ]]; then
     timedatectl list-timezones | less
-  elif timedatectl list-timezones | grep --quiet "^${time_zone}"; then
+  elif timedatectl list-timezones | grep --quiet "^${time_zone}$"; then
     break
   else
     printf "Invalid time zone. Try again.\n"
@@ -137,7 +137,7 @@ while true; do
   read -rp "Enter locale (e.g., \"en_US.UTF-8 UTF-8\"): " locale
   if [[ "${locale}" == "l" ]]; then
     less /usr/share/i18n/SUPPORTED
-  elif grep --quiet "^${locale}" /usr/share/i18n/SUPPORTED; then
+  elif grep --quiet "^${locale}$" /usr/share/i18n/SUPPORTED; then
     lang="$(printf "%s\n" "${locale}" | awk '{print $1}')"
     break
   else
@@ -150,7 +150,10 @@ read -rp "Enter hostname (e.g., archlinux): " hostname
 
 # country
 list_countries() {
-  reflector --list-countries | awk '{$NF=""; $(NF-1)=""; print $0}'
+  reflector --list-countries \
+    | awk '{$NF=""; $(NF-1)=""; print $0}' \
+    | sed "1,2d" \
+    | sed "s/[[:space:]]*$//"
 }
 
 printf "Enter a country to use as filter for the pacman mirror list.\n"
@@ -160,7 +163,7 @@ while true; do
   read -rp "Enter a country (e.g., \"Japan\"): " country
   if [[ "${country}" == "l" ]]; then
     list_countries | less
-  elif list_countries | grep --quiet "^${country}"; then
+  elif list_countries | grep --quiet "^${country}$"; then
     break
   else
     printf "Invalid country. Try again.\n"
@@ -190,8 +193,8 @@ done
 
 # target_disk, root_partition, & boot_partition
 list_disks() {
-  lsblk --nodeps --noheadings --output PATH,SIZE,MODEL |
-    grep --extended-regexp "^/dev/(sd|nvme|mmcblk)"
+  lsblk --nodeps --noheadings --output PATH,SIZE,MODEL \
+    | grep --extended-regexp "^/dev/(sd|nvme|mmcblk)"
 }
 
 printf "Disks:\n"
@@ -199,7 +202,7 @@ list_disks | sed "s/^/- /"
 
 while true; do
   read -rp "Enter target disk (e.g., \"/dev/sda\"): " target_disk
-  if list_disks | grep -wq "^${target_disk}"; then
+  if list_disks | grep --quiet "^${target_disk}\b"; then
     case "${target_disk}" in
     /dev/sd*)
       root_partition="${target_disk}2"
