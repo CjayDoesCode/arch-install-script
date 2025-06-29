@@ -54,8 +54,8 @@ chmod +x install.sh
 
 | Mount Point | Partition Type          | Size                    |
 | :---------- | :---------------------- | :---------------------- |
-| `/boot`     | EFI system partition    | 1 GiB                   |
-| `/`         | Linux x86-64 root (/)   | Remainder of the device |
+| /boot       | EFI system partition    | 1 GiB                   |
+| /           | Linux x86-64 root (/)   | Remainder of the device |
 
 ## Defaults
 
