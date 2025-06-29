@@ -180,8 +180,9 @@ while true; do
       break
       ;;
     esac
+  else
+    printf "Invalid disk. Try again.\n"
   fi
-  printf "Invalid disk. Try again.\n"
 done
 
 # swap_file_size
@@ -261,11 +262,19 @@ while true; do
 done
 
 # hostname
-read -rp "Enter hostname (e.g., archlinux): " hostname
+while true; do
+  read -rp "Enter hostname (e.g., archlinux): " hostname
+  [[ "${hostname}" =~ ^[a-zA-Z0-9]+$ ]] && break
+  echo "Invalid hostname. Try again."
+done
 
 # user_name & user_password
 if [[ "${create_user}" == "true" ]]; then
-  read -rp "Enter user name: " user_name
+  while true; do
+    read -rp "Enter user name: " user_name
+    [[ "${user_name}" =~ ^[a-zA-Z0-9]+$ ]] && break
+    echo "Invalid user name. Try again."
+  done
   while true; do
     read -rsp "Enter user password: " user_password && printf "\n"
     read -rsp "Reenter user password: " reentered_password && printf "\n"
