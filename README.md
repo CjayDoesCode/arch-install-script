@@ -28,27 +28,27 @@ chmod +x install.sh
 
 ## Configuration
 
-| Setting                        | Description                                              |
-| :----------------------------- | :------------------------------------------------------- |
-| editor_pkg                     | Package for the console text editor. (default: "helix")  |
-| silent_boot                    | Include silent boot kernel parameters. (default: "true") |
-| create_user                    | Create a user. (default: "true")                         |
-| create_swap_file               | Create a swap file. (default: "true")                    |
-| install_userspace_util_pkgs    | Install userspace utilities. (default: "true")           |
-| install_driver_pkgs            | Install video drivers. (default: "true")                 |
-| install_pipewire_pkgs          | Install PipeWire. (default: "true")                      |
+| Setting                        | Description                                                |
+| :----------------------------- | :--------------------------------------------------------- |
+| editor_pkg                     | Package for the console text editor. *(default: "helix")*  |
+| silent_boot                    | Include silent boot kernel parameters. *(default: "true")* |
+| create_user                    | Create a user. *(default: "true")*                         |
+| create_swap_file               | Create a swap file. *(default: "true")*                    |
+| install_userspace_util_pkgs    | Install userspace utilities. *(default: "true")*           |
+| install_driver_pkgs            | Install video drivers. *(default: "true")*                 |
+| install_pipewire_pkgs          | Install PipeWire. *(default: "true")*                      |
 
 ## Packages
 
-| Group                 | Packages                                                                                                                                                                  |
-| :-------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| base_system_pkgs      | intel-ucode\|amd_ucode ${editor_pkg} base bash bash-completion linux linux-firmware man-db man-pages networkmanager pacman-contrib reflector sudo texinfo                 |
-| userspace_util_pkgs   | dosfstools e2fsprogs exfatprogs ntfs-3g                                                                                                                                   |
-| common_driver_pkgs    | mesa xorg-server                                                                                                                                                          |
-| intel_driver_pkgs     | vulkan-intel                                                                                                                                                              |
-| amd_driver_pkgs       | vulkan-radeon                                                                                                                                                             |
-| pipewire_pkgs         | pipewire pipewire-alsa pipewire-audio pipewire-jack pipewire-pulse wireplumber                                                                                            |
-| optional_pkgs         | base-devel git openssh sof-firmware                                                                                                                                       |
+| Group                 | Packages                                                                                                                                                                              |
+| :-------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| base_system_pkgs      | `intel-ucode\|amd_ucode` `${editor_pkg}` `base` `bash` `bash-completion` `linux` `linux-firmware` `man-db` `man-pages` `networkmanager` `pacman-contrib` `reflector` `sudo` `texinfo` |
+| userspace_util_pkgs   | `dosfstools` `e2fsprogs` `exfatprogs` `ntfs-3g`                                                                                                                                       |
+| common_driver_pkgs    | `mesa` `xorg-server`                                                                                                                                                                  |
+| intel_driver_pkgs     | `vulkan-intel`                                                                                                                                                                        |
+| amd_driver_pkgs       | `vulkan-radeon`                                                                                                                                                                       |
+| pipewire_pkgs         | `pipewire` `pipewire-alsa` `pipewire-audio` `pipewire-jack` `pipewire-pulse` `wireplumber`                                                                                            |
+| optional_pkgs         | `base-devel` `git` `openssh` `sof-firmware`                                                                                                                                           |
 
 ## Partition Layout (UEFI/GPT)
 
@@ -59,10 +59,10 @@ chmod +x install.sh
 
 ## Defaults
 
-| Variable                      | Value                                                             |
-| :---------------------------- | :---------------------------------------------------------------- |
-| ntp_servers                   | 0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org 3.pool.ntp.org       |
-| reflector_args                | --save /etc/pacman.d/mirrorlist --sort score --country ${country} |
-| mkinitcpio_hooks              | systemd autodetect microcode modconf kms block filesystems        |
-| kernel_parameters             | root=UUID=${root_partition_uuid} rw                               |
-| silent_boot_kernel_parameters | quiet loglevel=3 systemd.show_status=auto rd.udev.log_level=3     |
+| Variable                      | Value                                                                         |
+| :---------------------------- | :---------------------------------------------------------------------------- |
+| ntp_servers                   | `0.pool.ntp.org` `1.pool.ntp.org` `2.pool.ntp.org` `3.pool.ntp.org`           |
+| reflector_args                | `--save` `/etc/pacman.d/mirrorlist` `--sort` `score` `--country` `${country}` |
+| mkinitcpio_hooks              | `systemd` `autodetect` `microcode` `modconf` `kms` `block` `filesystems`      |
+| kernel_parameters             | `root=UUID=${root_partition_uuid}` `rw`                                       |
+| silent_boot_kernel_parameters | `quiet` `loglevel=3` `systemd.show_status=auto` `rd.udev.log_level=3`         |
