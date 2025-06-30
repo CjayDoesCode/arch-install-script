@@ -68,15 +68,15 @@ base_system_pkgs=(
 # into base_system_pkgs based on the processor
 case "$(lscpu | grep "Vendor ID" | awk '{print $3}')" in
 AuthenticAMD)
-  printf "Detected AMD CPU.\n"
+  printf "\nDetected AMD CPU.\n"
   base_system_pkgs+=("amd-ucode")
   ;;
 GenuineIntel)
-  printf "Detected Intel CPU.\n"
+  printf "\nDetected Intel CPU.\n"
   base_system_pkgs+=("intel-ucode")
   ;;
 *)
-  printf "Unknown CPU vendor.\n"
+  printf "\nUnknown CPU vendor.\n\n"
   exit 1
   ;;
 esac
@@ -300,17 +300,17 @@ read -rp $'\n'"Reboot after installation? [Y/n]: " reboot
 # ------------------------------------------------------------------------------
 
 # synchronize system clock
-printf "Synchronizing system clock...\n"
+printf "\nSynchronizing system clock...\n"
 sed -i "s/^#NTP=/NTP=${ntp_servers[*]}/" /etc/systemd/timesyncd.conf
 systemctl restart systemd-timesyncd.service && sleep 5
 
 # partition disk
-printf "Partitioning disk...\n"
+printf "\nPartitioning disk...\n"
 printf "size=1GiB, type=uefi\n type=linux\n" |
   sfdisk --wipe always --wipe-partitions always --label gpt "${target_disk}"
 
 # format partitions
-printf "Formatting partitions...\n"
+printf "\nFormatting partitions...\n"
 mkfs.ext4 "${root_partition}"
 mkfs.fat -F 32 "${boot_partition}"
 
@@ -322,13 +322,13 @@ kernel_parameters=(
 )
 
 # mount file systems
-printf "Mounting file systems...\n"
+printf "\nMounting file systems...\n"
 mount "${root_partition}" /mnt
 mount --mkdir "${boot_partition}" /mnt/boot
 
 # create swap file
 if [[ "${create_swap_file}" == "true" ]]; then
-  printf "Creating swap file...\n"
+  printf "\nCreating swap file...\n"
   mkswap --file /mnt/swapfile --uuid clear --size "${swap_file_size}"
   swapon /mnt/swapfile
 fi
@@ -338,81 +338,81 @@ fi
 # ------------------------------------------------------------------------------
 
 # update mirror list
-printf "Updating mirror list...\n"
+printf "\nUpdating mirror list...\n"
 reflector "${reflector_args[@]}"
 
 # install base system packages
-printf "Installing base system packages...\n"
+printf "\nInstalling base system packages...\n"
 pacstrap -K /mnt "${system_pkgs[@]}"
 
 # generate file systems table
-printf "Generating file systems table...\n"
+printf "\nGenerating file systems table...\n"
 genfstab -U /mnt >>/mnt/etc/fstab
 
 # change root to new system
-printf "Changing root to new system...\n"
+printf "\nChanging root to new system...\n"
 arch-chroot /mnt /bin/bash <<CONFIGURE
 set -euo pipefail
 
 # set time zone
-printf "Setting time zone...\n"
+printf "\nSetting time zone...\n"
 ln --force --symbolic "/usr/share/zoneinfo/${time_zone}" /etc/localtime
 
 # set hardware clock
-printf "Setting hardware clock...\n"
+printf "\nSetting hardware clock...\n"
 hwclock --systohc
 
 # set up time synchronization
-printf "Setting up time synchronization...\n"
+printf "\nSetting up time synchronization...\n"
 systemctl enable systemd-timesyncd.service
 mkdir --parents /etc/systemd/timesyncd.conf.d
 printf "[Time]\nNTP=%s\n" "${ntp_servers[*]}" > \
   /etc/systemd/timesyncd.conf.d/ntp.conf
 
 # set locale
-printf "Setting locale...\n"
+printf "\nSetting locale...\n"
 sed -i "/^#${locale}/s/^#//" /etc/locale.gen && locale-gen
 printf "LANG=%s\n" "${lang}" >/etc/locale.conf
 
 # set hostname
-printf "Setting hostname...\n"
+printf "\nSetting hostname...\n"
 printf "%s\n" "${hostname}" >/etc/hostname
 
 # enable network manager
-printf "Enabling Network Manager...\n"
+printf "\nEnabling Network Manager...\n"
 systemctl enable NetworkManager.service
 
 # configure mkinitcpio
-printf "Configuring mkinitcpio...\n"
+printf "\nConfiguring mkinitcpio...\n"
 printf "HOOKS=(%s)\n" "${mkinitcpio_hooks[*]}" > \
   /etc/mkinitcpio.conf.d/hooks.conf
 
 # regenerate initramfs image
-printf "Regenerating initramfs image...\n"
+printf "\nRegenerating initramfs image...\n"
 mkinitcpio --allpresets
 
 # create new user
 if [[ "${create_user}" == "true" ]]; then
-  printf "Creating user...\n"
+  printf "\nCreating user...\n"
   useradd --groups wheel --create-home --shell /usr/bin/bash "${user_name}"
   printf "%s:%s\n" "${user_name}" "${user_password}" | chpasswd
 fi
 
 # set root password
-printf "Setting root password...\n"
+printf "\nSetting root password...\n"
 printf "root:%s\n" "${root_password}" | chpasswd
 
 # configure sudo
-printf "Configuring sudo...\n"
+printf "\nConfiguring sudo...\n"
 printf "%%wheel ALL=(ALL) ALL\n" >/etc/sudoers.d/wheel
 chmod 0440 /etc/sudoers.d/wheel
 
 # install systemd-boot
-printf "Installing systemd-boot...\n"
+printf "\nInstalling systemd-boot...\n"
 bootctl install
 
 # configure systemd-boot
-printf "Configuring systemd-boot...\n"
+printf "\nConfiguring systemd-boot...\n"
 
 cat <<LOADER >/boot/loader/loader.conf
 default       arch.conf
@@ -436,16 +436,16 @@ options  ${kernel_parameters[*]}
 ENTRY
 
 # configure pacman
-printf "Configuring pacman...\n"
+printf "\nConfiguring pacman...\n"
 sed -i --regexp-extended "/^#(Color|VerbosePkgLists)/s/^#//" /etc/pacman.conf
 
 # set up reflector
-printf "Setting up reflector...\n"
+printf "\nSetting up reflector...\n"
 printf "%s\n" "${reflector_args[*]}" >/etc/xdg/reflector/reflector.conf
 systemctl enable reflector.timer
 
 # enable paccache timer
-printf "Enabling paccache timer...\n"
+printf "\nEnabling paccache timer...\n"
 systemctl enable paccache.timer
 CONFIGURE
 
@@ -453,5 +453,5 @@ CONFIGURE
 #   post-installation
 # ------------------------------------------------------------------------------
 
-printf "\nInstallation completed.\n"
+printf "\nInstallation completed.\n\n"
 [[ ! "${reboot}" =~ ^[nN]$ ]] && reboot
