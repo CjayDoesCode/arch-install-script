@@ -62,7 +62,7 @@ chmod +x install.sh
 | Variable                      | Value                                                                         |
 | :---------------------------- | :---------------------------------------------------------------------------- |
 | ntp_servers                   | `0.pool.ntp.org` `1.pool.ntp.org` `2.pool.ntp.org` `3.pool.ntp.org`           |
-| reflector_args                | `--save` `/etc/pacman.d/mirrorlist` `--sort` `score` `--country` `${country}` |
+| reflector_args                | `--save /etc/pacman.d/mirrorlist` `--sort score` `--country ${country}`       |
 | mkinitcpio_hooks              | `systemd` `autodetect` `microcode` `modconf` `kms` `block` `filesystems`      |
 | kernel_parameters             | `root=UUID=${root_partition_uuid}` `rw`                                       |
 | silent_boot_kernel_parameters | `quiet` `loglevel=3` `systemd.show_status=auto` `rd.udev.log_level=3`         |
