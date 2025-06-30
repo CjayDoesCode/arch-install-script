@@ -5,7 +5,7 @@ The process roughly follows the procedures outlined in the [ArchWiki Installatio
 The purpose of this script is to automate the installation of a base Arch Linux system as a foundation for a desktop environment, window manager, or compositor.
 
 > [!NOTE]
-> This script is not meant to substitute learning the manual installation process yourself.
+> **This script is not meant to substitute learning the manual installation process yourself.**
 > I strongly encourage reading the ArchWiki Installation Guide and creating your own installation script.
 > (If you choose to do so, feel free to fork this repository.)
 
