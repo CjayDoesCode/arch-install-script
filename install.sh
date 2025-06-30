@@ -157,11 +157,11 @@ list_countries() {
 # ------------------------------------------------------------------------------
 
 # target_disk, root_partition, & boot_partition
-printf "Disks:\n"
+printf "\nDisks:\n"
 list_disks | sed "s/^/- /"
 
 while true; do
-  read -rp "Enter target disk (e.g., \"/dev/sda\"): " target_disk
+  read -rp $'\n'"Enter target disk (e.g., \"/dev/sda\"): " target_disk
   if list_disks | grep --quiet "^${target_disk}\b"; then
     case "${target_disk}" in
     /dev/sd*)
@@ -181,32 +181,32 @@ while true; do
       ;;
     esac
   else
-    printf "Invalid disk. Try again.\n"
+    printf "\nInvalid disk. Try again.\n"
   fi
 done
 
 # swap_file_size
 if [[ "${create_swap_file}" == "true" ]]; then
   while true; do
-    read -rp "Enter swap file size (e.g., \"8GiB\"): " swap_file_size
+    read -rp $'\n'"Enter swap file size (e.g., \"8GiB\"): " swap_file_size
     [[ "${swap_file_size}" =~ ^[0-9]+GiB$ ]] && break
-    printf "Invalid swap file size. Try again.\n"
+    printf "\nInvalid swap file size. Try again.\n"
   done
 fi
 
 # country
-printf "Enter a country to use as filter for reflector.\n"
+printf "\nEnter a country to use as filter for reflector.\n"
 printf "Enter 'l' to list countries. Enter 'q' to exit.\n"
 
 while true; do
-  read -rp "Enter a country (e.g., \"Japan\"): " country
+  read -rp $'\n'"Enter a country (e.g., \"Japan\"): " country
   if [[ "${country}" == "l" ]]; then
     list_countries | less
   elif list_countries | grep --quiet "^${country}$"; then
     reflector_args+=("--country" "${country}")
     break
   else
-    printf "Invalid country. Try again.\n"
+    printf "\nInvalid country. Try again.\n"
   fi
 done
 
@@ -220,75 +220,75 @@ system_pkgs=("${base_system_pkgs[@]}")
 if [[ "${install_driver_pkgs}" == "true" ]]; then
   system_pkgs+=("${common_driver_pkgs[@]}")
 
-  read -rp "Install Intel driver packages? [Y/n]: " input
+  read -rp $'\n'"Install Intel driver packages? [Y/n]: " input
   [[ ! "${input}" =~ ^[nN]$ ]] && system_pkgs+=("${intel_driver_pkgs[@]}")
 
-  read -rp "Install AMD driver packages? [Y/n]: " input
+  read -rp $'\n'"Install AMD driver packages? [Y/n]: " input
   [[ ! "${input}" =~ ^[nN]$ ]] && system_pkgs+=("${amd_driver_pkgs[@]}")
 
   for pkg in "${optional_pkgs[@]}"; do
-    read -rp "Install ${pkg}? [Y/n]: " input
+    read -rp $'\n'"Install ${pkg}? [Y/n]: " input
     [[ ! "${input}" =~ ^[nN]$ ]] && system_pkgs+=("${pkg}")
   done
 fi
 
 # time_zone
-printf "Enter 'l' to list time zones. Enter 'q' to exit.\n"
+printf "\nEnter 'l' to list time zones. Enter 'q' to exit.\n"
 
 while true; do
-  read -rp "Enter time zone (e.g., \"Asia/Tokyo\"): " time_zone
+  read -rp $'\n'"Enter time zone (e.g., \"Asia/Tokyo\"): " time_zone
   if [[ "${time_zone}" == "l" ]]; then
     timedatectl list-timezones | less
   elif timedatectl list-timezones | grep --quiet "^${time_zone}$"; then
     break
   else
-    printf "Invalid time zone. Try again.\n"
+    printf "\nInvalid time zone. Try again.\n"
   fi
 done
 
 # locale & lang
-printf "Enter 'l' to list locales. Enter 'q' to exit.\n"
+printf "\nEnter 'l' to list locales. Enter 'q' to exit.\n"
 
 while true; do
-  read -rp "Enter locale (e.g., \"en_US.UTF-8 UTF-8\"): " locale
+  read -rp $'\n'"Enter locale (e.g., \"en_US.UTF-8 UTF-8\"): " locale
   if [[ "${locale}" == "l" ]]; then
     less /usr/share/i18n/SUPPORTED
   elif grep --quiet "^${locale}$" /usr/share/i18n/SUPPORTED; then
     lang="$(printf "%s\n" "${locale}" | awk '{print $1}')"
     break
   else
-    printf "Invalid locale. Try again.\n"
+    printf "\nInvalid locale. Try again.\n"
   fi
 done
 
 # hostname
 while true; do
-  read -rp "Enter hostname (e.g., archlinux): " hostname
+  read -rp $'\n'"Enter hostname (e.g., archlinux): " hostname
   [[ "${hostname}" =~ ^[a-zA-Z0-9]+$ ]] && break
-  echo "Invalid hostname. Try again."
+  printf "\nInvalid hostname. Try again.\n"
 done
 
 # user_name & user_password
 if [[ "${create_user}" == "true" ]]; then
   while true; do
-    read -rp "Enter user name: " user_name
+    read -rp $'\n'"Enter user name: " user_name
     [[ "${user_name}" =~ ^[a-zA-Z0-9]+$ ]] && break
-    echo "Invalid user name. Try again."
+    printf "\nInvalid user name. Try again.\n"
   done
   while true; do
-    read -rsp "Enter user password: " user_password && printf "\n"
+    read -rsp $'\n'"Enter user password: " user_password && printf "\n"
     read -rsp "Reenter user password: " reentered_password && printf "\n"
     [[ "${user_password}" == "${reentered_password}" ]] && break
-    printf "Passwords do not match. Try again.\n"
+    printf "\nPasswords do not match. Try again.\n"
   done
 fi
 
 # root_password
 while true; do
-  read -rsp "Enter root password: " root_password && printf "\n"
+  read -rsp $'\n'"Enter root password: " root_password && printf "\n"
   read -rsp "Reenter root password: " reentered_password && printf "\n"
   [[ "${root_password}" == "${reentered_password}" ]] && break
-  printf "Passwords do not match. Try again.\n"
+  printf "\nPasswords do not match. Try again.\n"
 done
 
 # ------------------------------------------------------------------------------
@@ -450,5 +450,5 @@ CONFIGURE
 # ------------------------------------------------------------------------------
 
 # reboot
-read -rp "Installation completed. Reboot now? [Y/n]: " input
+read -rp $'\n'"Installation completed. Reboot now? [Y/n]: " input
 [[ ! "${input}" =~ ^[nN]$ ]] && reboot
