@@ -32,6 +32,7 @@ hostname=""
 user_name=""
 user_password=""
 root_password=""
+reboot=""
 
 ntp_servers=(
   "0.pool.ntp.org"
@@ -291,6 +292,9 @@ while true; do
   printf "\nPasswords do not match. Try again.\n"
 done
 
+# reboot
+read -rp $'\n'"Reboot after installation? [Y/n]: " reboot
+
 # ------------------------------------------------------------------------------
 #   pre-installation
 # ------------------------------------------------------------------------------
@@ -449,6 +453,5 @@ CONFIGURE
 #   post-installation
 # ------------------------------------------------------------------------------
 
-# reboot
-read -rp $'\n'"Installation completed. Reboot now? [Y/n]: " input
-[[ ! "${input}" =~ ^[nN]$ ]] && reboot
+printf "\nInstallation completed.\n"
+[[ ! "${reboot}" =~ ^[nN]$ ]] && reboot
