@@ -4,6 +4,10 @@ Bash script for automating the installation of a base Arch Linux system from the
 The process roughly follows the procedures outlined in the [ArchWiki Installation Guide](https://wiki.archlinux.org/title/Installation_guide).
 The purpose of this script is to automate the installation of a base Arch Linux system as a foundation for a desktop environment, window manager, or compositor.
 
+> [!WARNING]
+> This script supports only x86_64 (AMD64) systems with AMD or Intel CPUs.
+> You will be prompted to select appropriate video drivers (AMD, Intel, or both) during installation.
+
 > [!NOTE]
 > **This script is not meant to substitute learning the manual installation process yourself.**
 > I strongly encourage reading the ArchWiki Installation Guide and creating your own installation script.
