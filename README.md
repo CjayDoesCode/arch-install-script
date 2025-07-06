@@ -59,6 +59,8 @@ chmod +x install.sh
 | pipewire_pkgs         | `pipewire` `pipewire-alsa` `pipewire-audio` `pipewire-jack` `pipewire-pulse` `wireplumber`                                                                                            |
 | optional_pkgs         | `base-devel` `git` `openssh` `sof-firmware`                                                                                                                                           |
 
+Either `intel-ucode` or `amd-ucode` is installed, depending on the processor.
+
 ## Partition Layout (UEFI/GPT)
 
 | Mount Point | Partition Type          | Size                    |
