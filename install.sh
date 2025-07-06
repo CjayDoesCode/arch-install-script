@@ -162,7 +162,7 @@ printf "\nDisks:\n"
 list_disks | sed "s/^/- /"
 
 while true; do
-  read -rp $'\n'"Enter target disk (e.g., \"/dev/sda\"): " target_disk
+  printf "\nEnter target disk (e.g., \"/dev/sda\"): " && read -r target_disk
   if list_disks | grep --quiet "^${target_disk}\b"; then
     case "${target_disk}" in
     /dev/sd*)
@@ -189,7 +189,7 @@ done
 # swap_file_size
 if [[ "${create_swap_file}" == "true" ]]; then
   while true; do
-    read -rp $'\n'"Enter swap file size (e.g., \"8GiB\"): " swap_file_size
+    printf "\nEnter swap file size (e.g., \"8GiB\"): " && read -r swap_file_size
     [[ "${swap_file_size}" =~ ^[0-9]+GiB$ ]] && break
     printf "\nInvalid swap file size. Try again.\n"
   done
@@ -200,7 +200,7 @@ printf "\nEnter a country to use as filter for reflector.\n"
 printf "Enter 'l' to list countries. Enter 'q' to exit.\n"
 
 while true; do
-  read -rp $'\n'"Enter a country (e.g., \"Japan\"): " country
+  printf "\nEnter a country (e.g., \"Japan\"): " && read -r country
   if [[ "${country}" == "l" ]]; then
     list_countries | less
   elif list_countries | grep --quiet "^${country}$"; then
@@ -221,14 +221,14 @@ system_pkgs=("${base_system_pkgs[@]}")
 if [[ "${install_driver_pkgs}" == "true" ]]; then
   system_pkgs+=("${common_driver_pkgs[@]}")
 
-  read -rp $'\n'"Install Intel driver packages? [Y/n]: " input
+  printf "\nInstall Intel driver packages? [Y/n]: " && read -r input
   [[ ! "${input}" =~ ^[nN]$ ]] && system_pkgs+=("${intel_driver_pkgs[@]}")
 
-  read -rp $'\n'"Install AMD driver packages? [Y/n]: " input
+  printf "\nInstall AMD driver packages? [Y/n]: " && read -r input
   [[ ! "${input}" =~ ^[nN]$ ]] && system_pkgs+=("${amd_driver_pkgs[@]}")
 
   for pkg in "${optional_pkgs[@]}"; do
-    read -rp $'\n'"Install ${pkg}? [Y/n]: " input
+    printf "\nInstall %s? [Y/n]: " "${pkg}" && read -r input
     [[ ! "${input}" =~ ^[nN]$ ]] && system_pkgs+=("${pkg}")
   done
 fi
@@ -237,7 +237,7 @@ fi
 printf "\nEnter 'l' to list time zones. Enter 'q' to exit.\n"
 
 while true; do
-  read -rp $'\n'"Enter time zone (e.g., \"Asia/Tokyo\"): " time_zone
+  printf "\nEnter time zone (e.g., \"Asia/Tokyo\"): " && read -r time_zone
   if [[ "${time_zone}" == "l" ]]; then
     timedatectl list-timezones | less
   elif timedatectl list-timezones | grep --quiet "^${time_zone}$"; then
@@ -251,7 +251,7 @@ done
 printf "\nEnter 'l' to list locales. Enter 'q' to exit.\n"
 
 while true; do
-  read -rp $'\n'"Enter locale (e.g., \"en_US.UTF-8 UTF-8\"): " locale
+  printf "\nEnter locale (e.g., \"en_US.UTF-8 UTF-8\"): " && read -r locale
   if [[ "${locale}" == "l" ]]; then
     less /usr/share/i18n/SUPPORTED
   elif grep --quiet "^${locale}$" /usr/share/i18n/SUPPORTED; then
@@ -264,7 +264,7 @@ done
 
 # hostname
 while true; do
-  read -rp $'\n'"Enter hostname (e.g., archlinux): " hostname
+  printf "\nEnter hostname (e.g., archlinux): " && read -r hostname
   [[ "${hostname}" =~ ^[a-zA-Z0-9]+$ ]] && break
   printf "\nInvalid hostname. Try again.\n"
 done
@@ -272,13 +272,15 @@ done
 # user_name & user_password
 if [[ "${create_user}" == "true" ]]; then
   while true; do
-    read -rp $'\n'"Enter user name: " user_name
+    printf "\nEnter user name: " && read -r user_name
     [[ "${user_name}" =~ ^[a-zA-Z0-9]+$ ]] && break
     printf "\nInvalid user name. Try again.\n"
   done
   while true; do
-    read -rsp $'\n'"Enter user password: " user_password && printf "\n"
-    read -rsp "Reenter user password: " reentered_password && printf "\n"
+    printf "\nEnter user password: "
+    read -rs user_password && printf "\n"
+    printf "Reenter user password: "
+    read -rs reentered_password && printf "\n"
     [[ "${user_password}" == "${reentered_password}" ]] && break
     printf "\nPasswords do not match. Try again.\n"
   done
@@ -286,14 +288,16 @@ fi
 
 # root_password
 while true; do
-  read -rsp $'\n'"Enter root password: " root_password && printf "\n"
-  read -rsp "Reenter root password: " reentered_password && printf "\n"
+  printf "\nEnter root password: "
+  read -rs root_password && printf "\n"
+  printf "Reenter user password: "
+  read -rs reentered_password && printf "\n"
   [[ "${root_password}" == "${reentered_password}" ]] && break
   printf "\nPasswords do not match. Try again.\n"
 done
 
 # reboot
-read -rp $'\n'"Reboot after installation? [Y/n]: " reboot
+printf "\nReboot after installation? [Y/n]: " && read -r reboot
 
 # ------------------------------------------------------------------------------
 #   pre-installation
