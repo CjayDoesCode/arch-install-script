@@ -65,7 +65,7 @@ base_system_pkgs=(
 )
 
 # insert either amd-ucode or intel-ucode
-# into base_system_pkgs based on the processor
+# into base_system_pkgs depending on the processor
 case "$(lscpu | grep "Vendor ID" | awk '{print $3}')" in
 AuthenticAMD)
   printf "\nDetected AMD CPU.\n"
