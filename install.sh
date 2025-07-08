@@ -12,27 +12,11 @@ create_user="true"                 # create a user
 create_swap_file="true"            # create a swap file
 install_userspace_util_pkgs="true" # install userspace utilities
 install_driver_pkgs="true"         # install video drivers
-install_pipewire_pkgs="true"       # install PipeWire
+install_pipewire_pkgs="true"       # install pipewire
 
 # ------------------------------------------------------------------------------
 #   variables
 # ------------------------------------------------------------------------------
-
-target_disk=""
-root_partition=""
-boot_partition=""
-root_partition_uuid=""
-swap_file_size=""
-country=""
-system_pkgs=()
-time_zone=""
-locale=""
-lang=""
-hostname=""
-user_name=""
-user_password=""
-root_password=""
-reboot=""
 
 ntp_servers=(
   "0.pool.ntp.org"
