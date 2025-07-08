@@ -442,4 +442,4 @@ CONFIGURE
 # ------------------------------------------------------------------------------
 
 printf "\nInstallation completed.\n\n"
-[[ ! "${reboot}" =~ ^[nN]$ ]] && reboot
+[[ ! "${reboot}" =~ ^[nN]$ ]] && systemctl reboot
