@@ -15,6 +15,22 @@ install_driver_pkgs="true"         # install video drivers
 install_pipewire_pkgs="true"       # install pipewire
 
 # ------------------------------------------------------------------------------
+#   functions
+# ------------------------------------------------------------------------------
+
+list_disks() {
+  lsblk --nodeps --noheadings --output PATH,SIZE,MODEL |
+    grep --extended-regexp "^/dev/(sd|nvme|mmcblk)"
+}
+
+list_countries() {
+  reflector --list-countries |
+    awk '{$NF=""; $(NF-1)=""; print $0}' |
+    sed "1,2d" |
+    sed "s/[[:space:]]*$//"
+}
+
+# ------------------------------------------------------------------------------
 #   variables
 # ------------------------------------------------------------------------------
 
@@ -60,7 +76,7 @@ GenuineIntel)
   base_system_pkgs+=("intel-ucode")
   ;;
 *)
-  printf "\nUnknown CPU vendor.\n\n"
+  printf "\nUnknown CPU vendor.\n\n" >&2
   exit 1
   ;;
 esac
@@ -120,22 +136,6 @@ silent_boot_kernel_parameters=(
 if [[ "${silent_boot}" == "true" ]]; then
   kernel_parameters+=("${silent_boot_kernel_parameters[@]}")
 fi
-
-# ------------------------------------------------------------------------------
-#   functions
-# ------------------------------------------------------------------------------
-
-list_disks() {
-  lsblk --nodeps --noheadings --output PATH,SIZE,MODEL |
-    grep --extended-regexp "^/dev/(sd|nvme|mmcblk)"
-}
-
-list_countries() {
-  reflector --list-countries |
-    awk '{$NF=""; $(NF-1)=""; print $0}' |
-    sed "1,2d" |
-    sed "s/[[:space:]]*$//"
-}
 
 # ------------------------------------------------------------------------------
 #   user input
@@ -211,8 +211,9 @@ if [[ "${install_driver_pkgs}" == "true" ]]; then
   printf "\nInstall AMD driver packages? [Y/n]: " && read -r input
   [[ ! "${input}" =~ ^[nN]$ ]] && system_pkgs+=("${amd_driver_pkgs[@]}")
 
+  printf "\n"
   for pkg in "${optional_pkgs[@]}"; do
-    printf "\nInstall %s? [Y/n]: " "${pkg}" && read -r input
+    printf "Install %s? [Y/n]: " "${pkg}" && read -r input
     [[ ! "${input}" =~ ^[nN]$ ]] && system_pkgs+=("${pkg}")
   done
 fi
@@ -249,7 +250,7 @@ done
 # hostname
 while true; do
   printf "\nEnter hostname (e.g., archlinux): " && read -r hostname
-  [[ "${hostname}" =~ ^[a-zA-Z0-9]+$ ]] && break
+  [[ -n "${hostname}" ]] && break
   printf "\nInvalid hostname. Try again.\n"
 done
 
@@ -257,7 +258,7 @@ done
 if [[ "${create_user}" == "true" ]]; then
   while true; do
     printf "\nEnter user name: " && read -r user_name
-    [[ "${user_name}" =~ ^[a-zA-Z0-9]+$ ]] && break
+    [[ -n "${user_name}" ]] && break
     printf "\nInvalid user name. Try again.\n"
   done
   while true; do
@@ -383,12 +384,16 @@ mkinitcpio --allpresets
 if [[ "${create_user}" == "true" ]]; then
   printf "\nCreating user...\n"
   useradd --groups wheel --create-home --shell /usr/bin/bash "${user_name}"
-  printf "%s:%s\n" "${user_name}" "${user_password}" | chpasswd
+  if [[ -n "${user_password}" ]]; then
+    printf "%s:%s\n" "${user_name}" "${user_password}" | chpasswd
+  fi
 fi
 
 # set root password
-printf "\nSetting root password...\n"
-printf "root:%s\n" "${root_password}" | chpasswd
+if [[ -n ${root_password} ]]; then
+  printf "\nSetting root password...\n"
+  printf "root:%s\n" "${root_password}" | chpasswd
+fi
 
 # configure sudo
 printf "\nConfiguring sudo...\n"
