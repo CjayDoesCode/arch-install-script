@@ -15,8 +15,8 @@ The purpose of this script is to automate the installation of a base Arch Linux 
 
 ## Prerequisites
 
-- Boot the live environment
-- Connect to the internet
+- Boot the live environment.
+- Connect to the internet.
 
 ## Usage
 
