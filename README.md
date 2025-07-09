@@ -25,7 +25,7 @@ The purpose of this script is to automate the installation of a base Arch Linux 
 curl -o install.sh https://raw.githubusercontent.com/CjayDoesCode/arch-install-script/main/install.sh
 ```
 
-2. Add executable permissions.
+2. Grant execute permission.
 ```bash
 chmod +x install.sh
 ```
