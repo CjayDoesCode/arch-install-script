@@ -28,7 +28,7 @@ ntp_servers=(
 reflector_args=(
   "--save" "/etc/pacman.d/mirrorlist"
   "--sort" "score"
-  # "--country" "${country}"
+  # "--country" ""${country}""
 )
 
 base_system_pkgs=(
@@ -251,7 +251,7 @@ while true; do
   if [[ "${country}" == "l" ]]; then
     list_countries | less
   elif check_country "${country}"; then
-    reflector_args+=("--country" "${country}")
+    reflector_args+=("--country" "\"${country}\"")
     break
   else
     printf "\nInvalid country. Try again.\n"
