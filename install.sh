@@ -137,6 +137,16 @@ list_countries() {
     sed "s/[[:space:]]*$//"
 }
 
+check_disk() {
+  local disk="$1"
+  
+  if list_disks | grep --quiet "^${disk}\b"; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 # ------------------------------------------------------------------------------
 #   user input
 # ------------------------------------------------------------------------------
@@ -147,7 +157,7 @@ list_disks | sed "s/^/- /"
 
 while true; do
   printf "\nEnter target disk (e.g., \"/dev/sda\"): " && read -r target_disk
-  if list_disks | grep --quiet "^${target_disk}\b"; then
+  if check_disk "${target_disk}"; then
     case "${target_disk}" in
     /dev/sd*)
       root_partition="${target_disk}2"
