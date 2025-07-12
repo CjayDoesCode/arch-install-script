@@ -156,6 +156,30 @@ check_country() {
     return 1
   fi
 }
+
+confirm() {
+  local prompt="$1"
+  local input=""
+
+  while true; do
+    printf "%b [y/n]: " "${prompt}" >&2
+    read -r input
+    case "${input,,}" in
+    y | yes)
+      printf "true"
+      break
+      ;;
+    n | no)
+      printf "false"
+      break
+      ;;
+    *)
+      printf "\nInvalid input. Try again.\n" >&2
+      ;;
+    esac
+  done
+}
+
 # ------------------------------------------------------------------------------
 #   user input
 # ------------------------------------------------------------------------------
@@ -224,16 +248,15 @@ system_pkgs=("${base_system_pkgs[@]}")
 if [[ "${install_driver_pkgs}" == "true" ]]; then
   system_pkgs+=("${common_driver_pkgs[@]}")
 
-  printf "\nInstall Intel driver packages? [Y/n]: " && read -r input
-  [[ ! "${input}" =~ ^[nN]$ ]] && system_pkgs+=("${intel_driver_pkgs[@]}")
+  input="$(confirm "\nInstall Intel driver packages?")"
+  [[ "${input}" == "true" ]] && system_pkgs+=("${intel_driver_pkgs[@]}")
 
-  printf "\nInstall AMD driver packages? [Y/n]: " && read -r input
-  [[ ! "${input}" =~ ^[nN]$ ]] && system_pkgs+=("${amd_driver_pkgs[@]}")
+  input="$(confirm "\nInstall AMD driver packages?")"
+  [[ "${input}" == "true" ]] && system_pkgs+=("${amd_driver_pkgs[@]}")
 
-  printf "\n"
   for pkg in "${optional_pkgs[@]}"; do
-    printf "Install %s? [Y/n]: " "${pkg}" && read -r input
-    [[ ! "${input}" =~ ^[nN]$ ]] && system_pkgs+=("${pkg}")
+    input="$(confirm "\nInstall ${pkg}?")"
+    [[ "${input}" == "true" ]] && system_pkgs+=("${pkg}")
   done
 fi
 
