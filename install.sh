@@ -281,9 +281,6 @@ while true; do
   printf "\nPasswords do not match. Try again.\n"
 done
 
-# reboot
-printf "\nReboot after installation? [Y/n]: " && read -r reboot
-
 # ------------------------------------------------------------------------------
 #   pre-installation
 # ------------------------------------------------------------------------------
@@ -444,9 +441,4 @@ printf "\nEnabling paccache timer...\n"
 systemctl enable paccache.timer
 CONFIGURE
 
-# ------------------------------------------------------------------------------
-#   post-installation
-# ------------------------------------------------------------------------------
-
 printf "\nInstallation completed.\n\n"
-[[ ! "${reboot}" =~ ^[nN]$ ]] && systemctl reboot
