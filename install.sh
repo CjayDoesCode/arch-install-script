@@ -275,7 +275,7 @@ fi
 while true; do
   printf "\nEnter root password: "
   read -rs root_password && printf "\n"
-  printf "Reenter user password: "
+  printf "Reenter root password: "
   read -rs reentered_password && printf "\n"
   [[ "${root_password}" == "${reentered_password}" ]] && break
   printf "\nPasswords do not match. Try again.\n"
