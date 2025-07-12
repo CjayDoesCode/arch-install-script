@@ -290,7 +290,9 @@ printf "\nReboot after installation? [Y/n]: " && read -r reboot
 
 # synchronize system clock
 printf "\nSynchronizing system clock...\n"
-sed -i "s/^#NTP=/NTP=${ntp_servers[*]}/" /etc/systemd/timesyncd.conf
+mkdir --parents /etc/systemd/timesyncd.conf.d
+printf "[Time]\nNTP=%s\n" "${ntp_servers[*]}" > \
+  /etc/systemd/timesyncd.conf.d/ntp.conf
 systemctl restart systemd-timesyncd.service && sleep 5
 
 # partition disk
