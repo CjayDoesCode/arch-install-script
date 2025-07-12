@@ -147,10 +147,30 @@ check_disk() {
   fi
 }
 
+check_time_zone() {
+  local time_zone="$1"
+  
+  if timedatectl list-timezones | grep --quiet "^${time_zone}$"; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 check_country() {
   local country="$1"
   
   if list_countries | grep --quiet "^${country}$"; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+check_locale() {
+  local locale="$1"
+
+  if grep --quiet "^${locale}$" /usr/share/i18n/SUPPORTED; then
     return 0
   else
     return 1
@@ -267,7 +287,7 @@ while true; do
   printf "\nEnter time zone (e.g., \"Asia/Tokyo\"): " && read -r time_zone
   if [[ "${time_zone}" == "l" ]]; then
     timedatectl list-timezones | less
-  elif timedatectl list-timezones | grep --quiet "^${time_zone}$"; then
+  elif check_time_zone "${time_zone}"; then
     break
   else
     printf "\nInvalid time zone. Try again.\n"
@@ -281,7 +301,7 @@ while true; do
   printf "\nEnter locale (e.g., \"en_US.UTF-8 UTF-8\"): " && read -r locale
   if [[ "${locale}" == "l" ]]; then
     less /usr/share/i18n/SUPPORTED
-  elif grep --quiet "^${locale}$" /usr/share/i18n/SUPPORTED; then
+  elif check_locale "${locale}"; then
     lang="$(printf "%s\n" "${locale}" | awk '{print $1}')"
     break
   else
