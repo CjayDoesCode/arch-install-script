@@ -147,6 +147,15 @@ check_disk() {
   fi
 }
 
+check_country() {
+  local country="$1"
+  
+  if list_countries | grep --quiet "^${country}$"; then
+    return 0
+  else
+    return 1
+  fi
+}
 # ------------------------------------------------------------------------------
 #   user input
 # ------------------------------------------------------------------------------
@@ -197,7 +206,7 @@ while true; do
   printf "\nEnter a country (e.g., \"Japan\"): " && read -r country
   if [[ "${country}" == "l" ]]; then
     list_countries | less
-  elif list_countries | grep --quiet "^${country}$"; then
+  elif check_country "${country}"; then
     reflector_args+=("--country" "${country}")
     break
   else
