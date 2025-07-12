@@ -15,22 +15,6 @@ install_driver_pkgs="true"         # install video drivers
 install_pipewire_pkgs="true"       # install pipewire
 
 # ------------------------------------------------------------------------------
-#   functions
-# ------------------------------------------------------------------------------
-
-list_disks() {
-  lsblk --nodeps --noheadings --output PATH,SIZE,MODEL |
-    grep --extended-regexp "^/dev/(sd|nvme|mmcblk)"
-}
-
-list_countries() {
-  reflector --list-countries |
-    awk '{$NF=""; $(NF-1)=""; print $0}' |
-    sed "1,2d" |
-    sed "s/[[:space:]]*$//"
-}
-
-# ------------------------------------------------------------------------------
 #   variables
 # ------------------------------------------------------------------------------
 
@@ -136,6 +120,22 @@ silent_boot_kernel_parameters=(
 if [[ "${silent_boot}" == "true" ]]; then
   kernel_parameters+=("${silent_boot_kernel_parameters[@]}")
 fi
+
+# ------------------------------------------------------------------------------
+#   functions
+# ------------------------------------------------------------------------------
+
+list_disks() {
+  lsblk --nodeps --noheadings --output PATH,SIZE,MODEL |
+    grep --extended-regexp "^/dev/(sd|nvme|mmcblk)"
+}
+
+list_countries() {
+  reflector --list-countries |
+    awk '{$NF=""; $(NF-1)=""; print $0}' |
+    sed "1,2d" |
+    sed "s/[[:space:]]*$//"
+}
 
 # ------------------------------------------------------------------------------
 #   user input
