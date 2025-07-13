@@ -50,7 +50,7 @@ base_system_pkgs=(
 
 # insert either amd-ucode or intel-ucode
 # into base_system_pkgs depending on the processor
-case "$(lscpu | grep "Vendor ID" | awk '{print $3}')" in
+case "$(lscpu | grep "Vendor ID" | awk "{print \$3}")" in
 AuthenticAMD)
   printf "\nDetected AMD CPU.\n"
   base_system_pkgs+=("amd-ucode")
@@ -132,14 +132,12 @@ list_disks() {
 
 list_countries() {
   reflector --list-countries |
-    awk '{$NF=""; $(NF-1)=""; print $0}' |
-    sed "1,2d" |
-    sed "s/[[:space:]]*$//"
+    awk "BEGIN { FS=\"[ ]{2,}\" } ; FNR > 2 { print \$1 }"
 }
 
 check_disk() {
   local disk="$1"
-  
+
   if list_disks | grep --quiet "^${disk}\b"; then
     return 0
   else
@@ -149,7 +147,7 @@ check_disk() {
 
 check_time_zone() {
   local time_zone="$1"
-  
+
   if timedatectl list-timezones | grep --quiet "^${time_zone}$"; then
     return 0
   else
@@ -159,7 +157,7 @@ check_time_zone() {
 
 check_country() {
   local country="$1"
-  
+
   if list_countries | grep --quiet "^${country}$"; then
     return 0
   else
@@ -302,7 +300,7 @@ while true; do
   if [[ "${locale}" == "l" ]]; then
     less /usr/share/i18n/SUPPORTED
   elif check_locale "${locale}"; then
-    lang="$(printf "%s\n" "${locale}" | awk '{print $1}')"
+    lang="$(printf "%s\n" "${locale}" | awk "{print \$1}")"
     break
   else
     printf "\nInvalid locale. Try again.\n"
