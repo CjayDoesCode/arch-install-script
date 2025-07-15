@@ -1,504 +1,570 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
-
 # ------------------------------------------------------------------------------
-#   configuration
+#       main function
 # ------------------------------------------------------------------------------
 
-editor_pkg="helix"                 # package for the console text editor
-silent_boot="true"                 # include silent boot kernel parameters
-create_user="true"                 # create a user
-create_swap_file="true"            # create a swap file
-install_userspace_util_pkgs="true" # install userspace utilities
-install_driver_pkgs="true"         # install video drivers
-install_pipewire_pkgs="true"       # install pipewire
+main() {
+  printf '\n'
 
-# ------------------------------------------------------------------------------
-#   variables
-# ------------------------------------------------------------------------------
+  # ----  configuration  -------------------------------------------------------
 
-ntp_servers=(
-  "0.pool.ntp.org"
-  "1.pool.ntp.org"
-  "2.pool.ntp.org"
-  "3.pool.ntp.org"
-)
+  local swap='true'
+  local install_fs_util_packages='true'
+  local install_driver_packages='true'
+  local install_pipewire_packages='true'
 
-reflector_args=(
-  "--save" "/etc/pacman.d/mirrorlist"
-  "--sort" "score"
-  # "--country" ""${country}""
-)
+  # ----  variables  -----------------------------------------------------------
 
-base_system_pkgs=(
-  # "intel_ucode|amd_ucode"
-  "${editor_pkg}"
-  "base"
-  "bash"
-  "bash-completion"
-  "linux"
-  "linux-firmware"
-  "man-db"
-  "man-pages"
-  "networkmanager"
-  "pacman-contrib"
-  "reflector"
-  "sudo"
-  "texinfo"
-)
+  local target_disk=''
+  local root_partition=''
+  local boot_partition=''
+  local swap_size=''
 
-# insert either amd-ucode or intel-ucode
-# into base_system_pkgs depending on the processor
-case "$(lscpu | grep "Vendor ID" | awk "{print \$3}")" in
-AuthenticAMD)
-  printf "\nDetected AMD CPU.\n"
-  base_system_pkgs+=("amd-ucode")
-  ;;
-GenuineIntel)
-  printf "\nDetected Intel CPU.\n"
-  base_system_pkgs+=("intel-ucode")
-  ;;
-*)
-  printf "\nUnknown CPU vendor.\n\n" >&2
-  exit 1
-  ;;
-esac
+  local reflector_options=()
 
-userspace_util_pkgs=(
-  "dosfstools" # vfat
-  "e2fsprogs"  # ext3/4
-  "exfatprogs" # exfat
-  "ntfs-3g"    # ntfs
-)
+  local system_packages=()
+  local base_system_packages=(
+    'base'
+    'bash'
+    'bash-completion'
+    'linux'
+    'linux-firmware'
+    'man-db'
+    'man-pages'
+    'nano'
+    'networkmanager'
+    'pacman-contrib'
+    'reflector'
+    'sudo'
+    'texinfo'
+  )
 
-common_driver_pkgs=("mesa" "xorg-server")
-intel_driver_pkgs=("vulkan-intel")
-amd_driver_pkgs=("vulkan-radeon")
+  local fs_util_packages=('dosfstools' 'e2fsprogs' 'exfatprogs' 'ntfs-3g')
 
-pipewire_pkgs=(
-  "pipewire"
-  "pipewire-alsa"
-  "pipewire-audio"
-  "pipewire-jack"
-  "pipewire-pulse"
-  "wireplumber"
-)
+  local common_driver_packages=('mesa' 'xorg-server')
+  local amd_driver_packages=('vulkan-radeon')
+  local intel_driver_packages=('vulkan-intel')
 
-optional_pkgs=(
-  "base-devel"
-  "git"
-  "openssh"
-  "sof-firmware"
-)
+  local pipewire_packages=(
+    'pipewire'
+    'pipewire-alsa'
+    'pipewire-audio'
+    'pipewire-jack'
+    'pipewire-pulse'
+    'wireplumber'
+  )
 
-# systemd supersedes base, udev, & fsck
-mkinitcpio_hooks=(
-  "systemd"
-  "autodetect"
-  "microcode"
-  "modconf"
-  "kms"
-  "block"
-  "filesystems"
-)
+  local optional_packages=('base-devel' 'git' 'openssh' 'sof-firmware')
 
-# root parameter inserted after
-# root partition is formatted
-kernel_parameters=(
-  # root=UUID=${root_partition_uuid}
-  "rw"
-)
+  system_packages+=("${base_system_packages[@]}")
 
-silent_boot_kernel_parameters=(
-  "quiet"
-  "loglevel=3"
-  "systemd.show_status=auto"
-  "rd.udev.log_level=3"
-)
+  case "$(lscpu | grep 'Vendor ID' | awk '{print $3}')" in
+  AuthenticAMD)
+    print --color cyan 'info: detected amd cpu.\n\n'
+    system_packages+=("amd-ucode")
+    ;;
+  GenuineIntel)
+    print --color cyan 'info: detected intel cpu.\n\n'
+    system_packages+=("intel-ucode")
+    ;;
+  *)
+    print --color red 'error: unknown cpu vendor.\n\n' >&2
+    exit 1
+    ;;
+  esac
 
-if [[ "${silent_boot}" == "true" ]]; then
-  kernel_parameters+=("${silent_boot_kernel_parameters[@]}")
-fi
-
-# ------------------------------------------------------------------------------
-#   functions
-# ------------------------------------------------------------------------------
-
-list_disks() {
-  lsblk --nodeps --noheadings --output PATH,SIZE,MODEL |
-    grep --extended-regexp "^/dev/(sd|nvme|mmcblk)"
-}
-
-list_countries() {
-  reflector --list-countries |
-    awk "BEGIN { FS=\"[ ]{2,}\" } ; FNR > 2 { print \$1 }"
-}
-
-check_disk() {
-  local disk="$1"
-
-  if list_disks | grep --quiet "^${disk}\b"; then
-    return 0
-  else
-    return 1
+  if [[ "${install_fs_util_packages}" == 'true' ]]; then
+    system_packages+=("${fs_util_packages[@]}")
   fi
-}
 
-check_time_zone() {
-  local time_zone="$1"
-
-  if timedatectl list-timezones | grep --quiet "^${time_zone}$"; then
-    return 0
-  else
-    return 1
+  if [[ "${install_driver_packages}" == 'true' ]]; then
+    system_packages+=("${common_driver_packages[@]}")
   fi
-}
 
-check_country() {
-  local country="$1"
-
-  if list_countries | grep --quiet "^${country}$"; then
-    return 0
-  else
-    return 1
+  if [[ "${install_pipewire_packages}" == 'true' ]]; then
+    system_packages+=("${pipewire_packages[@]}")
   fi
-}
 
-check_locale() {
-  local locale="$1"
+  # ----  checks  --------------------------------------------------------------
 
-  if grep --quiet "^${locale}$" /usr/share/i18n/SUPPORTED; then
-    return 0
-  else
-    return 1
+  if ! is_uefi; then
+    print --color red 'error: system is not booted in uefi mode.\n\n' >&2
+    exit 1
   fi
+
+  if ! is_connected; then
+    print --color red 'error: failed to connect to the internet.\n\n' >&2
+    exit 1
+  fi
+
+  if [[ ! -e "$(dirname "$0")/configure.sh" ]]; then
+    print --color red 'error: failed to find configure.sh.\n\n' >&2
+    exit 1
+  fi
+
+  # ----  input  ---------------------------------------------------------------
+
+  {
+    read -r target_disk
+    read -r root_partition
+    read -r boot_partition
+  } < <(input_target_disk)
+
+  if [[ "${swap}" == 'true' ]]; then
+    read -r swap_size < <(input_swap_size)
+  fi
+
+  readarray -t reflector_options < <(input_reflector_options)
+
+  if [[ "${install_driver_packages}" == 'true' ]]; then
+    if [[ "$(confirm 'install amd driver packages?')" == 'true' ]]; then
+      system_packages+=("${amd_driver_packages[@]}")
+    fi
+
+    if [[ "$(confirm 'install intel driver packages?')" == 'true' ]]; then
+      system_packages+=("${intel_driver_packages[@]}")
+    fi
+  fi
+
+  for package in "${optional_packages[@]}"; do
+    if [[ "$(confirm "install ${package}?")" == 'true' ]]; then
+      system_packages+=("${package}")
+    fi
+  done
+
+  # ----  installation  --------------------------------------------------------
+
+  if ! is_clock_synced; then
+    print --color cyan 'info: attempting to sync system clock...\n\n'
+    sync_clock || {
+      print --color red 'error: failed to sync system clock.\n\n' >&2
+      exit 1
+    }
+  fi
+
+  print --color cyan 'info: partitioning disk...\n\n'
+  partition_disk "${target_disk}" || {
+    print --color red 'error: failed to partition disk.\n\n' >&2
+    exit 1
+  }
+
+  print --color cyan 'info: formatting partitions...\n\n'
+  format_partitions "${root_partition}" "${boot_partition}" || {
+    print --color red 'error: failed to format partitions.\n\n' >&2
+    exit 1
+  }
+
+  print --color cyan 'info: mounting file systems...\n\n'
+  mount_file_systems "${root_partition}" "${boot_partition}" || {
+    print --color red 'error: failed to mount file systems.\n\n' >&2
+    exit 1
+  }
+
+  if [[ "${swap}" == 'true' ]]; then
+    print --color cyan 'info: creating swap...\n\n'
+    create_swap "${swap_size}" || {
+      print --color red 'error: failed to create swap.\n\n' >&2
+      exit 1
+    }
+  fi
+
+  print --color cyan 'info: updating mirror list...\n\n'
+  update_mirror_list "${reflector_options[@]}" || {
+    print --color red 'error: failed to update mirror list.\n\n' >&2
+    exit 1
+  }
+
+  print --color cyan 'info: installing system packages...\n\n'
+  install_system_packages "${system_packages[@]}" || {
+    print --color red 'error: failed to install system packages.\n\n' >&2
+    exit 1
+  }
+
+  print --color cyan 'generating fstab...\n\n'
+  generate_fstab || {
+    print --color red 'error: failed to generate fstab.\n\n' >&2
+    exit 1
+  }
+
+  print --color cyan 'changing root to new system...\n\n'
+  configure_system || {
+    print --color red 'error: failed to configure the system.\n\n' >&2
+    exit 1
+  }
+
+  print --color cyan 'installation completed.\n\n'
 }
+
+# ------------------------------------------------------------------------------
+#       input functions
+# ------------------------------------------------------------------------------
 
 confirm() {
   local prompt="$1"
-  local input=""
+  local input=''
 
   while true; do
-    printf "%b [y/n]: " "${prompt}" >&2
+    print --color cyan "${prompt} [y/n]: " >&2
     read -r input
+    printf '\n' >&2
+
     case "${input,,}" in
     y | yes)
-      printf "true"
+      printf 'true'
       break
       ;;
     n | no)
-      printf "false"
+      printf 'false'
       break
       ;;
     *)
-      printf "\nInvalid input. Try again.\n" >&2
+      print --color red 'error: invalid input. try again.\n\n' >&2
       ;;
     esac
   done
 }
 
-# ------------------------------------------------------------------------------
-#   user input
-# ------------------------------------------------------------------------------
+input_target_disk() {
+  local disks=''
+  local target_disk=''
+  local root_partition=''
+  local boot_partition=''
+  local return=()
 
-# target_disk, root_partition, & boot_partition
-printf "\nDisks:\n"
-list_disks | sed "s/^/- /"
+  if ! disks="$(list_disks)"; then
+    print --color red 'error: failed to get disks.\n\n' >&2
+    exit 1
+  fi
 
-while true; do
-  printf "\nEnter target disk (e.g., \"/dev/sda\"): " && read -r target_disk
-  if check_disk "${target_disk}"; then
-    case "${target_disk}" in
-    /dev/sd*)
-      root_partition="${target_disk}2"
-      boot_partition="${target_disk}1"
+  print --color cyan 'disks:\n' >&2
+  printf '%s\n\n' "${disks}" >&2
+
+  while true; do
+    print --color cyan 'enter target disk (e.g., "/dev/sda"): ' >&2
+    read -r target_disk
+    printf '\n' >&2
+
+    if is_disk_valid "${target_disk}"; then
+      case "${target_disk}" in
+      /dev/sd*)
+        root_partition="${target_disk}2"
+        boot_partition="${target_disk}1"
+        break
+        ;;
+      /dev/nvme*)
+        root_partition="${target_disk}p2"
+        boot_partition="${target_disk}p1"
+        break
+        ;;
+      /dev/mmcblk*)
+        root_partition="${target_disk}p2"
+        boot_partition="${target_disk}p1"
+        break
+        ;;
+      *)
+        print --color red 'error: invalid disk. try again.\n\n' >&2
+        ;;
+      esac
+    elif [[ "$?" -eq 2 ]]; then
+      print --color red 'error: failed to get disks.\n\n' >&2
+      exit 1
+    else
+      print --color red 'error: invalid disk. try again.\n\n' >&2
+    fi
+  done
+
+  return=("${target_disk}" "${root_partition}" "${boot_partition}")
+  printf '%s\n' "${return[@]}"
+}
+
+input_swap_size() {
+  local swap_size=''
+  local number=''
+  local suffix=''
+
+  while true; do
+    print --color cyan 'enter swap size (e.g., "8G"): ' >&2
+    read -r swap_size
+    printf '\n' >&2
+
+    number="${swap_size%%[[:alpha:]]*}"
+    suffix="${swap_size##*[[:digit:]]}"
+
+    case "${suffix,,}" in
+    g | gib)
+      swap_size="${number}GiB"
       break
       ;;
-    /dev/nvme*)
-      root_partition="${target_disk}p2"
-      boot_partition="${target_disk}p1"
+    m | mib)
+      swap_size="${number}MiB"
       break
       ;;
-    /dev/mmcblk*)
-      root_partition="${target_disk}p2"
-      boot_partition="${target_disk}p1"
-      break
+    *)
+      print --color red 'error: invalid swap size. try again.\n\n' >&2
       ;;
     esac
-  else
-    printf "\nInvalid disk. Try again.\n"
-  fi
-done
+  done
 
-# swap_file_size
-if [[ "${create_swap_file}" == "true" ]]; then
+  printf '%s' "${swap_size}"
+}
+
+input_reflector_options() {
+  local country=''
+  local countries=''
+  local return=()
+
+  print \
+    --color cyan \
+    'info: enter a country to use as filter for reflector.\n\n' >&2
+
+  print \
+    --color cyan \
+    "info: enter 'l' to list countries. enter 'q' to exit.\\n\\n" >&2
+
   while true; do
-    printf "\nEnter swap file size (e.g., \"8GiB\"): " && read -r swap_file_size
-    [[ "${swap_file_size}" =~ ^[0-9]+GiB$ ]] && break
-    printf "\nInvalid swap file size. Try again.\n"
+    print --color cyan 'enter a country (e.g., "Japan"): ' >&2
+    read -r country
+    printf '\n' >&2
+
+    if [[ "${country}" == 'l' ]]; then
+      if countries="$(list_countries)"; then
+        printf '%s' "${countries}" | column --fillrows | less >&2
+      else
+        print --color red 'error: failed to get countries.\n\n' >&2
+        exit 1
+      fi
+    else
+      if is_country_valid "${country}"; then
+        break
+      elif [[ "$?" -eq 2 ]]; then
+        print --color red 'error: failed to get countries.\n\n' >&2
+        exit 1
+      else
+        print --color red 'error: invalid country. try again.\n\n' >&2
+      fi
+    fi
   done
-fi
 
-# country
-printf "\nEnter a country to use as filter for reflector.\n"
-printf "Enter 'l' to list countries. Enter 'q' to exit.\n"
+  return=(
+    '--save' '/etc/pacman.d/mirrorlist'
+    '--sort' 'score'
+    '--country' "'${country}'"
+  )
 
-while true; do
-  printf "\nEnter a country (e.g., \"Japan\"): " && read -r country
-  if [[ "${country}" == "l" ]]; then
-    list_countries | less
-  elif check_country "${country}"; then
-    reflector_args+=("--country" "\"${country}\"")
-    break
+  printf '%s\n' "${return[@]}"
+}
+
+# ------------------------------------------------------------------------------
+#       install functions
+# ------------------------------------------------------------------------------
+
+sync_clock() {
+  local config_directory='/etc/systemd/timesyncd.conf.d'
+  local config_path="${config_directory}/ntp.conf"
+  local ntp_servers=(
+    '1.pool.ntp.org'
+    '0.pool.ntp.org'
+    '2.pool.ntp.org'
+    '3.pool.ntp.org'
+  )
+
+  mkdir --parents "${config_directory}" || return 1
+  printf '[Time]\nNTP=%s\n' "${ntp_servers[*]}" >"${config_path}" || return 1
+  systemctl restart systemd-timesyncd.service || return 1
+
+  local interval=5
+  local retries=0
+  local max_retries=3
+
+  until is_clock_synced; do
+    sleep "${interval}"
+    ((++retries > max_retries)) && return 1
+  done
+}
+
+partition_disk() {
+  local target_disk="$1"
+  local partition_layout='size=1GiB, type=uefi\n type=linux\n'
+  local sfdisk_options='--wipe always --wipe-partitions always --label gpt'
+
+  printf '%s' "${partition_layout}" |
+    sfdisk "${sfdisk_options}" "${target_disk}" || return 1
+}
+
+format_partitions() {
+  local root_partition="$1"
+  local boot_partition="$2"
+
+  mkfs.ext4 "${root_partition}" || return 1
+  mkfs.fat -F 32 "${boot_partition}" || return 1
+}
+
+mount_file_systems() {
+  local root_partition="$1"
+  local boot_partition="$2"
+
+  mount "${root_partition}" /mnt || return 1
+  mount --mkdir "${boot_partition}" /mnt/boot || return 1
+}
+
+create_swap() {
+  local swap_size="$1"
+
+  mkswap --file /mnt/swapfile --uuid clear --size "${swap_size}" || return 1
+  swapon /mnt/swapfile || return 1
+}
+
+update_mirror_list() {
+  local reflector_options=("$@")
+
+  local retries=0
+  local max_retries=3
+
+  until reflector "${reflector_options[@]}"; do
+    print --color red 'error: failed to update mirror list. retrying...' >&2
+    ((++retries > max_retries)) && return 1
+  done
+}
+
+install_system_packages() {
+  local system_packages=("$@")
+
+  pacman -Sy --needed --noconfirm archlinux-keyring
+
+  local retries=0
+  local max_retries=3
+
+  until pacstrap -K /mnt "${system_packages[@]}"; do
+    print \
+      --color red \
+      'error: failed to install system packages. retrying...' >&2
+    ((++retries > max_retries)) && return 1
+  done
+}
+
+generate_fstab() {
+  genfstab -U /mnt >>/mnt/etc/fstab
+}
+
+configure_system() {
+  local source_script_path=''
+  local copied_script_path=''
+  local exit_status=0
+
+  source_script_path="$(dirname "$0")/configure.sh"
+  copied_script_path="/root/configure.sh"
+
+  cp --force "${source_script_path}" "/mnt/${copied_script_path}" || return 1
+
+  if ! arch-chroot /mnt /bin/bash "${copied_script_path}"; then
+    exit_status="$?"
+  fi
+
+  rm --force "/mnt/${copied_script_path}" || return 1
+  return "${exit_status}"
+}
+
+# ------------------------------------------------------------------------------
+#       check functions
+# ------------------------------------------------------------------------------
+
+is_uefi() {
+  ls /sys/firmware/efi/efivars &>/dev/null
+}
+
+is_connected() {
+  ping -c 1 -W 3 archlinux.org &>/dev/null
+}
+
+is_disk_valid() {
+  local disk="$1"
+  local disks=''
+
+  if ! disks="$(list_disks)"; then
+    return 2
+  fi
+
+  printf '%s' "${disks}" | grep --quiet "${disk}"
+}
+
+is_country_valid() {
+  local country="$1"
+  local countries=''
+
+  if ! countries="$(list_countries)"; then
+    return 2
+  fi
+
+  printf '%s' "${countries}" | grep --quiet "^${country}\$"
+}
+
+is_clock_synced() {
+  timedatectl | grep --quiet 'System clock synchronized: yes'
+}
+
+# ------------------------------------------------------------------------------
+#       output functions
+# ------------------------------------------------------------------------------
+
+print() {
+  local message=''
+  local color=''
+
+  if [[ "$1" == '--color' ]]; then
+    message="$3"
+    color="$2"
   else
-    printf "\nInvalid country. Try again.\n"
+    message="$1"
   fi
-done
 
-# system_pkgs
-system_pkgs=("${base_system_pkgs[@]}")
-[[ "${install_userspace_util_pkgs}" == "true" ]] &&
-  system_pkgs+=("${userspace_util_pkgs[@]}")
-[[ "${install_pipewire_pkgs}" == "true" ]] &&
-  system_pkgs+=("${pipewire_pkgs[@]}")
+  if [[ -n "${color}" ]]; then
+    declare -A color_codes=(
+      [black]=30
+      [red]=31
+      [green]=32
+      [yellow]=33
+      [blue]=34
+      [magenta]=35
+      [cyan]=36
+      [white]=37
+    )
 
-if [[ "${install_driver_pkgs}" == "true" ]]; then
-  system_pkgs+=("${common_driver_pkgs[@]}")
+    local color_sequence=''
+    local reset_sequence=''
 
-  input="$(confirm "\nInstall Intel driver packages?")"
-  [[ "${input}" == "true" ]] && system_pkgs+=("${intel_driver_pkgs[@]}")
+    color_sequence="\\033[1;${color_codes[${color}]}m"
+    reset_sequence='\033[0m'
 
-  input="$(confirm "\nInstall AMD driver packages?")"
-  [[ "${input}" == "true" ]] && system_pkgs+=("${amd_driver_pkgs[@]}")
-
-  for pkg in "${optional_pkgs[@]}"; do
-    input="$(confirm "\nInstall ${pkg}?")"
-    [[ "${input}" == "true" ]] && system_pkgs+=("${pkg}")
-  done
-fi
-
-# time_zone
-printf "\nEnter 'l' to list time zones. Enter 'q' to exit.\n"
-
-while true; do
-  printf "\nEnter time zone (e.g., \"Asia/Tokyo\"): " && read -r time_zone
-  if [[ "${time_zone}" == "l" ]]; then
-    timedatectl list-timezones | less
-  elif check_time_zone "${time_zone}"; then
-    break
+    printf '%b' "${color_sequence}${message}${reset_sequence}"
   else
-    printf "\nInvalid time zone. Try again.\n"
+    printf '%b' "${message}"
   fi
-done
+}
 
-# locale & lang
-printf "\nEnter 'l' to list locales. Enter 'q' to exit.\n"
+list_disks() {
+  local disks=''
+  local lsblk_options=('--nodeps' '--noheadings' '--output' 'PATH,MODEL')
 
-while true; do
-  printf "\nEnter locale (e.g., \"en_US.UTF-8 UTF-8\"): " && read -r locale
-  if [[ "${locale}" == "l" ]]; then
-    less /usr/share/i18n/SUPPORTED
-  elif check_locale "${locale}"; then
-    lang="$(printf "%s\n" "${locale}" | awk "{print \$1}")"
-    break
-  else
-    printf "\nInvalid locale. Try again.\n"
+  if ! disks="$(lsblk "${lsblk_options[@]}" 2>/dev/null)"; then
+    return 1
   fi
-done
 
-# hostname
-while true; do
-  printf "\nEnter hostname (e.g., archlinux): " && read -r hostname
-  [[ -n "${hostname}" ]] && break
-  printf "\nInvalid hostname. Try again.\n"
-done
+  printf '%s' "${disks}" |
+    grep --extended-regexp "^/dev/(sd|nvme|mmcblk)" |
+    sed 's/^/  - /'
+  printf '\n'
+}
 
-# user_name & user_password
-if [[ "${create_user}" == "true" ]]; then
-  while true; do
-    printf "\nEnter user name: " && read -r user_name
-    [[ -n "${user_name}" ]] && break
-    printf "\nInvalid user name. Try again.\n"
-  done
-  while true; do
-    printf "\nEnter user password: "
-    read -rs user_password && printf "\n"
-    printf "Reenter user password: "
-    read -rs reentered_password && printf "\n"
-    [[ "${user_password}" == "${reentered_password}" ]] && break
-    printf "\nPasswords do not match. Try again.\n"
-  done
-fi
+list_countries() {
+  local countries=''
 
-# root_password
-while true; do
-  printf "\nEnter root password: "
-  read -rs root_password && printf "\n"
-  printf "Reenter root password: "
-  read -rs reentered_password && printf "\n"
-  [[ "${root_password}" == "${reentered_password}" ]] && break
-  printf "\nPasswords do not match. Try again.\n"
-done
-
-# ------------------------------------------------------------------------------
-#   pre-installation
-# ------------------------------------------------------------------------------
-
-# synchronize system clock
-printf "\nSynchronizing system clock...\n"
-mkdir --parents /etc/systemd/timesyncd.conf.d
-printf "[Time]\nNTP=%s\n" "${ntp_servers[*]}" > \
-  /etc/systemd/timesyncd.conf.d/ntp.conf
-systemctl restart systemd-timesyncd.service && sleep 5
-
-# partition disk
-printf "\nPartitioning disk...\n"
-printf "size=1GiB, type=uefi\n type=linux\n" |
-  sfdisk --wipe always --wipe-partitions always --label gpt "${target_disk}"
-
-# format partitions
-printf "\nFormatting partitions...\n"
-mkfs.ext4 "${root_partition}"
-mkfs.fat -F 32 "${boot_partition}"
-
-# insert root parameter into kernel parameters
-root_partition_uuid="$(lsblk --noheadings --output UUID "${root_partition}")"
-kernel_parameters=(
-  "root=UUID=${root_partition_uuid}"
-  "${kernel_parameters[@]}"
-)
-
-# mount file systems
-printf "\nMounting file systems...\n"
-mount "${root_partition}" /mnt
-mount --mkdir "${boot_partition}" /mnt/boot
-
-# create swap file
-if [[ "${create_swap_file}" == "true" ]]; then
-  printf "\nCreating swap file...\n"
-  mkswap --file /mnt/swapfile --uuid clear --size "${swap_file_size}"
-  swapon /mnt/swapfile
-fi
-
-# ------------------------------------------------------------------------------
-#   installation
-# ------------------------------------------------------------------------------
-
-# update mirror list
-printf "\nUpdating mirror list...\n"
-reflector "${reflector_args[@]}"
-
-# install base system packages
-printf "\nInstalling base system packages...\n"
-pacstrap -K /mnt "${system_pkgs[@]}"
-
-# generate file systems table
-printf "\nGenerating file systems table...\n"
-genfstab -U /mnt >>/mnt/etc/fstab
-
-# change root to new system
-printf "\nChanging root to new system...\n"
-arch-chroot /mnt /bin/bash <<CONFIGURE
-set -euo pipefail
-
-# set time zone
-printf "\nSetting time zone...\n"
-ln --force --symbolic "/usr/share/zoneinfo/${time_zone}" /etc/localtime
-
-# set hardware clock
-printf "\nSetting hardware clock...\n"
-hwclock --systohc
-
-# set up time synchronization
-printf "\nSetting up time synchronization...\n"
-systemctl enable systemd-timesyncd.service
-mkdir --parents /etc/systemd/timesyncd.conf.d
-printf "[Time]\nNTP=%s\n" "${ntp_servers[*]}" > \
-  /etc/systemd/timesyncd.conf.d/ntp.conf
-
-# set locale
-printf "\nSetting locale...\n"
-sed -i "/^#${locale}/s/^#//" /etc/locale.gen && locale-gen
-printf "LANG=%s\n" "${lang}" >/etc/locale.conf
-
-# set hostname
-printf "\nSetting hostname...\n"
-printf "%s\n" "${hostname}" >/etc/hostname
-
-# enable network manager
-printf "\nEnabling Network Manager...\n"
-systemctl enable NetworkManager.service
-
-# configure mkinitcpio
-printf "\nConfiguring mkinitcpio...\n"
-printf "HOOKS=(%s)\n" "${mkinitcpio_hooks[*]}" > \
-  /etc/mkinitcpio.conf.d/hooks.conf
-
-# regenerate initramfs image
-printf "\nRegenerating initramfs image...\n"
-mkinitcpio --allpresets
-
-# create new user
-if [[ "${create_user}" == "true" ]]; then
-  printf "\nCreating user...\n"
-  useradd --groups wheel --create-home --shell /usr/bin/bash "${user_name}"
-  if [[ -n "${user_password}" ]]; then
-    printf "%s:%s\n" "${user_name}" "${user_password}" | chpasswd
+  if ! countries="$(reflector --list-countries 2>/dev/null)"; then
+    return 1
   fi
-fi
 
-# set root password
-if [[ -n ${root_password} ]]; then
-  printf "\nSetting root password...\n"
-  printf "root:%s\n" "${root_password}" | chpasswd
-fi
+  printf '%s' "${countries}" |
+    awk --field-separator='[ ]{2,}' 'FNR > 2 { print $1 }'
+}
 
-# configure sudo
-printf "\nConfiguring sudo...\n"
-printf "%%wheel ALL=(ALL) ALL\n" >/etc/sudoers.d/wheel
-chmod 0440 /etc/sudoers.d/wheel
-
-# install systemd-boot
-printf "\nInstalling systemd-boot...\n"
-bootctl install
-
-# configure systemd-boot
-printf "\nConfiguring systemd-boot...\n"
-
-cat <<LOADER >/boot/loader/loader.conf
-default       arch.conf
-timeout       0
-console-mode  max
-editor        no
-LOADER
-
-cat <<ENTRY >/boot/loader/entries/arch.conf
-title    Arch Linux
-linux    /vmlinuz-linux
-initrd   /initramfs-linux.img
-options  ${kernel_parameters[*]}
-ENTRY
-
-cat <<ENTRY >/boot/loader/entries/arch-fallback.conf
-title    Arch Linux (fallback)
-linux    /vmlinuz-linux
-initrd   /initramfs-linux-fallback.img
-options  ${kernel_parameters[*]}
-ENTRY
-
-# configure pacman
-printf "\nConfiguring pacman...\n"
-sed -i --regexp-extended "/^#(Color|VerbosePkgLists)/s/^#//" /etc/pacman.conf
-
-# set up reflector
-printf "\nSetting up reflector...\n"
-printf "%s\n" "${reflector_args[*]}" >/etc/xdg/reflector/reflector.conf
-systemctl enable reflector.timer
-
-# enable paccache timer
-printf "\nEnabling paccache timer...\n"
-systemctl enable paccache.timer
-CONFIGURE
-
-printf "\nInstallation completed.\n\n"
+main
