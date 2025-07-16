@@ -10,7 +10,7 @@ main() {
   # ----  configuration  -------------------------------------------------------
 
   local swap='true'
-  local install_fs_util_packages='true'
+  local install_filesystem_utility_packages='true'
   local install_driver_packages='true'
   local install_pipewire_packages='true'
 
@@ -40,7 +40,12 @@ main() {
     'texinfo'
   )
 
-  local fs_util_packages=('dosfstools' 'e2fsprogs' 'exfatprogs' 'ntfs-3g')
+  local filesystem_utility_packages=(
+    'dosfstools'
+    'e2fsprogs'
+    'exfatprogs'
+    'ntfs-3g'
+  )
 
   local common_driver_packages=('mesa' 'xorg-server')
   local amd_driver_packages=('vulkan-radeon')
@@ -59,14 +64,14 @@ main() {
 
   system_packages+=("${base_system_packages[@]}")
 
-  case "$(lscpu | grep 'Vendor ID' | awk '{print $3}')" in
+  case "$(get_vendor_id)" in
   AuthenticAMD)
     print --color cyan 'info: detected amd cpu.\n\n'
-    system_packages+=("amd-ucode")
+    system_packages+=('amd-ucode')
     ;;
   GenuineIntel)
     print --color cyan 'info: detected intel cpu.\n\n'
-    system_packages+=("intel-ucode")
+    system_packages+=('intel-ucode')
     ;;
   *)
     print --color red 'error: unknown cpu vendor.\n\n' >&2
@@ -74,8 +79,8 @@ main() {
     ;;
   esac
 
-  if [[ "${install_fs_util_packages}" == 'true' ]]; then
-    system_packages+=("${fs_util_packages[@]}")
+  if [[ "${install_filesystem_utility_packages}" == 'true' ]]; then
+    system_packages+=("${filesystem_utility_packages[@]}")
   fi
 
   if [[ "${install_driver_packages}" == 'true' ]]; then
@@ -133,6 +138,11 @@ main() {
     fi
   done
 
+  print --color red 'warning: installation will wipe target disk.\n'
+  if [[ "$(confirm 'proceed with installation?')" != 'true' ]]; then
+    exit 0
+  fi
+
   # ----  installation  --------------------------------------------------------
 
   if ! is_clock_synced; then
@@ -181,19 +191,19 @@ main() {
     exit 1
   }
 
-  print --color cyan 'generating fstab...\n\n'
+  print --color cyan 'info: generating fstab...\n\n'
   generate_fstab || {
     print --color red 'error: failed to generate fstab.\n\n' >&2
     exit 1
   }
 
-  print --color cyan 'changing root to new system...\n\n'
+  print --color cyan 'info: changing root to new system...\n\n'
   configure_system || {
     print --color red 'error: failed to configure the system.\n\n' >&2
     exit 1
   }
 
-  print --color cyan 'installation completed.\n\n'
+  print --color cyan 'info: installation completed.\n\n'
 }
 
 # ------------------------------------------------------------------------------
@@ -226,24 +236,26 @@ confirm() {
 }
 
 input_target_disk() {
-  local disks=''
   local target_disk=''
   local root_partition=''
   local boot_partition=''
-  local return=()
 
+  local disks=''
   if ! disks="$(list_disks)"; then
     print --color red 'error: failed to get disks.\n\n' >&2
     exit 1
   fi
 
   print --color cyan 'disks:\n' >&2
-  printf '%s\n\n' "${disks}" >&2
+  printf '%s' "${disks}" | sed 's/^/  - /' >&2
+  printf '\n\n' >&2
 
   while true; do
     print --color cyan 'enter target disk (e.g., "/dev/sda"): ' >&2
     read -r target_disk
     printf '\n' >&2
+
+    target_disk="${target_disk,,}"
 
     if is_disk_valid "${target_disk}"; then
       case "${target_disk}" in
@@ -274,8 +286,13 @@ input_target_disk() {
     fi
   done
 
-  return=("${target_disk}" "${root_partition}" "${boot_partition}")
-  printf '%s\n' "${return[@]}"
+  local return_list=(
+    "${target_disk}"
+    "${root_partition}"
+    "${boot_partition}"
+  )
+
+  printf '%s\n' "${return_list[@]}"
 }
 
 input_swap_size() {
@@ -288,22 +305,24 @@ input_swap_size() {
     read -r swap_size
     printf '\n' >&2
 
-    number="${swap_size%%[[:alpha:]]*}"
+    swap_size="${swap_size,,}"
+    number="${swap_size%%[^[:digit:]]*}"
     suffix="${swap_size##*[[:digit:]]}"
 
-    case "${suffix,,}" in
-    g | gib)
-      swap_size="${number}GiB"
-      break
-      ;;
-    m | mib)
-      swap_size="${number}MiB"
-      break
-      ;;
-    *)
-      print --color red 'error: invalid swap size. try again.\n\n' >&2
-      ;;
-    esac
+    if [[ "${swap_size}" == "${number}${suffix}" ]]; then
+      case "${suffix}" in
+      g | gib)
+        swap_size="${number}GiB"
+        break
+        ;;
+      m | mib)
+        swap_size="${number}MiB"
+        break
+        ;;
+      esac
+    fi
+
+    print --color red 'error: invalid swap size. try again.\n\n' >&2
   done
 
   printf '%s' "${swap_size}"
@@ -312,29 +331,30 @@ input_swap_size() {
 input_reflector_options() {
   local country=''
   local countries=''
-  local return=()
 
-  print \
-    --color cyan \
-    'info: enter a country to use as filter for reflector.\n\n' >&2
+  print --color cyan 'info: enter a country ' >&2
+  print --color cyan 'to use as filter for reflector.\n' >&2
 
-  print \
-    --color cyan \
-    "info: enter 'l' to list countries. enter 'q' to exit.\\n\\n" >&2
+  print --color cyan "info: enter 'l' to list countries. " >&2
+  print --color cyan "enter 'q' to return.\\n\\n" >&2
 
   while true; do
     print --color cyan 'enter a country (e.g., "Japan"): ' >&2
     read -r country
     printf '\n' >&2
 
-    if [[ "${country}" == 'l' ]]; then
+    case "${country}" in
+    l)
       if countries="$(list_countries)"; then
-        printf '%s' "${countries}" | column --fillrows | less >&2
+        printf '%s' "${countries}" |
+          column --fillrows |
+          less --clear-screen --tilde >&2
       else
         print --color red 'error: failed to get countries.\n\n' >&2
         exit 1
       fi
-    else
+      ;;
+    *)
       if is_country_valid "${country}"; then
         break
       elif [[ "$?" -eq 2 ]]; then
@@ -343,16 +363,21 @@ input_reflector_options() {
       else
         print --color red 'error: invalid country. try again.\n\n' >&2
       fi
-    fi
+      ;;
+    esac
   done
 
-  return=(
+  if printf '%s' "${country}" | grep --quiet ' '; then
+    country="'${country}'"
+  fi
+
+  local return_list=(
     '--save' '/etc/pacman.d/mirrorlist'
     '--sort' 'score'
-    '--country' "'${country}'"
+    '--country' "${country}"
   )
 
-  printf '%s\n' "${return[@]}"
+  printf '%s\n' "${return_list[@]}"
 }
 
 # ------------------------------------------------------------------------------
@@ -362,6 +387,7 @@ input_reflector_options() {
 sync_clock() {
   local config_directory='/etc/systemd/timesyncd.conf.d'
   local config_path="${config_directory}/ntp.conf"
+
   local ntp_servers=(
     '1.pool.ntp.org'
     '0.pool.ntp.org'
@@ -378,8 +404,8 @@ sync_clock() {
   local max_retries=3
 
   until is_clock_synced; do
-    sleep "${interval}"
     ((++retries > max_retries)) && return 1
+    sleep "${interval}"
   done
 }
 
@@ -411,7 +437,7 @@ mount_file_systems() {
 create_swap() {
   local swap_size="$1"
 
-  mkswap --file /mnt/swapfile --uuid clear --size "${swap_size}" || return 1
+  mkswap --file /mnt/swapfile --size "${swap_size}" --uuid clear || return 1
   swapon /mnt/swapfile || return 1
 }
 
@@ -422,8 +448,9 @@ update_mirror_list() {
   local max_retries=3
 
   until reflector "${reflector_options[@]}"; do
-    print --color red 'error: failed to update mirror list. retrying...' >&2
     ((++retries > max_retries)) && return 1
+    print --color red 'error: failed to update mirror list. ' >&2
+    print --color red 'retrying...\n\n' >&2
   done
 }
 
@@ -436,10 +463,9 @@ install_system_packages() {
   local max_retries=3
 
   until pacstrap -K /mnt "${system_packages[@]}"; do
-    print \
-      --color red \
-      'error: failed to install system packages. retrying...' >&2
     ((++retries > max_retries)) && return 1
+    print --color red 'error: failed to install system packages. ' >&2
+    print --color red 'retrying...\n\n' >&2
   done
 }
 
@@ -470,11 +496,19 @@ configure_system() {
 # ------------------------------------------------------------------------------
 
 is_uefi() {
-  ls /sys/firmware/efi/efivars &>/dev/null
+  if ls /sys/firmware/efi/efivars &>/dev/null; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 is_connected() {
-  ping -c 1 -W 3 archlinux.org &>/dev/null
+  if ping -c 1 -W 3 archlinux.org &>/dev/null; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 is_disk_valid() {
@@ -485,7 +519,11 @@ is_disk_valid() {
     return 2
   fi
 
-  printf '%s' "${disks}" | grep --quiet "${disk}"
+  if printf '%s' "${disks}" | grep --quiet "^${disk}\b"; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 is_country_valid() {
@@ -496,27 +534,42 @@ is_country_valid() {
     return 2
   fi
 
-  printf '%s' "${countries}" | grep --quiet "^${country}\$"
+  if printf '%s' "${countries}" | grep --quiet "^${country}\$"; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 is_clock_synced() {
-  timedatectl | grep --quiet 'System clock synchronized: yes'
+  if [[ "$(timedatectl show -P NTPSynchronized)" == 'yes' ]]; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 # ------------------------------------------------------------------------------
 #       output functions
 # ------------------------------------------------------------------------------
 
+# usage: print [--color color] message
 print() {
   local message=''
   local color=''
 
-  if [[ "$1" == '--color' ]]; then
-    message="$3"
-    color="$2"
-  else
-    message="$1"
-  fi
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+    --color)
+      color="$2"
+      shift 2
+      ;;
+    *)
+      message="$1"
+      shift
+      ;;
+    esac
+  done
 
   if [[ -n "${color}" ]]; then
     declare -A color_codes=(
@@ -542,6 +595,10 @@ print() {
   fi
 }
 
+get_vendor_id() {
+  awk '/vendor_id/ { print $NF ; exit 1 }' /proc/cpuinfo
+}
+
 list_disks() {
   local disks=''
   local lsblk_options=('--nodeps' '--noheadings' '--output' 'PATH,MODEL')
@@ -550,10 +607,7 @@ list_disks() {
     return 1
   fi
 
-  printf '%s' "${disks}" |
-    grep --extended-regexp "^/dev/(sd|nvme|mmcblk)" |
-    sed 's/^/  - /'
-  printf '\n'
+  printf '%s' "${disks}" | awk '$1 ~ "^/dev/(sd|nvme|mmcblk)"'
 }
 
 list_countries() {
