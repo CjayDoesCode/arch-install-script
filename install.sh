@@ -62,7 +62,7 @@ declare -Ar COLOR_CODES=(
 # ------------------------------------------------------------------------------
 
 main() {
-  printf '\n'
+  print '\n'
 
   # ----  configuration  -------------------------------------------------------
 
@@ -134,7 +134,11 @@ main() {
 
   # ----  input  ---------------------------------------------------------------
 
-  target_disk="$(input_target_disk)" || return 1
+  target_disk="$(input_target_disk)"
+
+  if [[ -z "${target_disk}" ]]; then
+    return 1
+  fi
 
   case "${target_disk}" in
   /dev/sd*)
@@ -148,10 +152,6 @@ main() {
   /dev/mmcblk*)
     root_partition="${target_disk}p2"
     boot_partition="${target_disk}p1"
-    ;;
-  *)
-    print --color red 'error: invalid disk.\n\n' >&2
-    return 1
     ;;
   esac
 
@@ -172,8 +172,6 @@ main() {
 
   readarray -t optional_packages < <(input_optional_packages)
   system_packages+=("${optional_packages[@]}")
-
-  declare -p
 
   print --color yellow 'warning: installation will wipe target disk.\n\n'
   if ! confirm 'proceed with installation?'; then
@@ -234,9 +232,9 @@ main() {
     return 1
   }
 
-  print --color cyan 'info: changing root to new system...\n\n'
+  print --color cyan 'info: configuring system...\n\n'
   configure_system || {
-    print --color red 'error: failed to configure the system.\n\n' >&2
+    print --color red 'error: failed to configure system.\n\n' >&2
     return 1
   }
 
@@ -321,10 +319,13 @@ input_swap_size() {
         swap_size="${number}MiB"
         break
         ;;
+      *)
+        print --color red 'error: invalid suffix. try again.\n\n' >&2
+        ;;
       esac
+    else
+      print --color red 'error: invalid swap size. try again.\n\n' >&2
     fi
-
-    print --color red 'error: invalid swap size. try again.\n\n' >&2
   done
 
   printf '%s' "${swap_size}"
@@ -383,11 +384,11 @@ input_reflector_options() {
 input_driver_packages() {
   local driver_packages=()
 
-  if confirm 'install amd driver packages?' >&2; then
+  if confirm 'install amd driver packages?'; then
     driver_packages+=("${AMD_DRIVER_PACKAGES[@]}")
   fi
 
-  if confirm 'install intel driver packages?' >&2; then
+  if confirm 'install intel driver packages?'; then
     driver_packages+=("${INTEL_DRIVER_PACKAGES[@]}")
   fi
 
@@ -399,7 +400,7 @@ input_optional_packages() {
   local package=''
 
   for package in "${OPTIONAL_PACKAGES[@]}"; do
-    if confirm "install ${package}?" >&2; then
+    if confirm "install ${package}?"; then
       optional_packages+=("${package}")
     fi
   done
@@ -530,7 +531,7 @@ is_uefi() {
 }
 
 is_connected() {
-  if ping -c 1 -W 3 archlinux.org &>/dev/null; then
+  if ping -c 1 -W 5 archlinux.org &>/dev/null; then
     return 0
   else
     return 1
@@ -604,10 +605,8 @@ print() {
   done
 
   if [[ -n "${color}" ]]; then
-    local color_sequence="\\033[1;${COLOR_CODES[${color}]}m"
-    local reset_sequence='\033[0m'
-
-    printf '%b' "${color_sequence}${message}${reset_sequence}"
+    local color_code="${COLOR_CODES[${color}]}"
+    printf '\033[1;%sm%b\033[0m' "${color_code}" "${message}"
   else
     printf '%b' "${message}"
   fi
@@ -631,7 +630,10 @@ list_countries() {
 
   countries="$(reflector --list-countries 2>/dev/null)" || return 1
 
-  awk --field-separator='[ ]{2,}' 'FNR > 2 { print $1 }' <<<"${countries}"
+  awk '
+    BEGIN { FS="[ ]{2,}" }
+    FNR > 2 { print $1 }
+  ' <<<"${countries}"
 }
 
 main
