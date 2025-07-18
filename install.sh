@@ -1,63 +1,6 @@
 #!/usr/bin/env bash
 
 # ------------------------------------------------------------------------------
-#       constants
-# ------------------------------------------------------------------------------
-
-readonly BASE_SYSTEM_PACKAGES=(
-  'base'
-  'bash'
-  'bash-completion'
-  'linux'
-  'linux-firmware'
-  'man-db'
-  'man-pages'
-  'networkmanager'
-  'pacman-contrib'
-  'reflector'
-  'sudo'
-  'texinfo'
-)
-
-readonly FILESYSTEM_UTILITY_PACKAGES=(
-  'dosfstools'
-  'e2fsprogs'
-  'exfatprogs'
-  'ntfs-3g'
-)
-
-readonly COMMON_DRIVER_PACKAGES=('mesa' 'xorg-server')
-readonly AMD_DRIVER_PACKAGES=('vulkan-radeon')
-readonly INTEL_DRIVER_PACKAGES=('vulkan-intel')
-
-readonly PIPEWIRE_PACKAGES=(
-  'pipewire'
-  'pipewire-alsa'
-  'pipewire-audio'
-  'pipewire-jack'
-  'pipewire-pulse'
-  'wireplumber'
-)
-
-readonly OPTIONAL_PACKAGES=(
-  'base-devel'
-  'git'
-  'openssh'
-  'sof-firmware'
-)
-
-declare -Ar COLOR_CODES=(
-  [black]=30
-  [red]=31
-  [green]=32
-  [yellow]=33
-  [blue]=34
-  [magenta]=35
-  [cyan]=36
-  [white]=37
-)
-
-# ------------------------------------------------------------------------------
 #       main function
 # ------------------------------------------------------------------------------
 
@@ -66,6 +9,7 @@ main() {
 
   # ----  configuration  -------------------------------------------------------
 
+  local create_user='true'
   local editor_package='nano'
   local swap='true'
   local install_filesystem_utility_packages='true'
@@ -77,68 +21,112 @@ main() {
   local target_disk=''
   local root_partition=''
   local boot_partition=''
+
   local swap_size=''
 
+  local reflector_country=''
   local reflector_options=()
+
   local system_packages=()
   local driver_packages=()
   local optional_packages=()
 
-  system_packages+=("${BASE_SYSTEM_PACKAGES[@]}")
+  local base_system_packages=(
+    'base'
+    'bash'
+    'bash-completion'
+    'linux'
+    'linux-firmware'
+    'man-db'
+    'man-pages'
+    'networkmanager'
+    'pacman-contrib'
+    'reflector'
+    'sudo'
+    'texinfo'
+  )
+
+  local filesystem_utility_packages=(
+    'dosfstools'
+    'e2fsprogs'
+    'exfatprogs'
+    'ntfs-3g'
+  )
+
+  local common_driver_packages=('mesa' 'xorg-server')
+
+  local pipewire_packages=(
+    'pipewire'
+    'pipewire-alsa'
+    'pipewire-audio'
+    'pipewire-jack'
+    'pipewire-pulse'
+    'wireplumber'
+  )
+
+  local time_zone=''
+
+  local locale=''
+  local lang=''
+
+  local hostname=''
+
+  local user_name=''
+  local user_password=''
+
+  local root_password=''
+
+  system_packages+=("${base_system_packages[@]}")
 
   case "$(get_vendor_id)" in
   AuthenticAMD)
-    print --color cyan 'info: detected amd cpu.\n\n'
+    print_info 'detected amd cpu.\n\n'
     system_packages+=('amd-ucode')
     ;;
   GenuineIntel)
-    print --color cyan 'info: detected intel cpu.\n\n'
+    print_info 'detected intel cpu.\n\n'
     system_packages+=('intel-ucode')
     ;;
   *)
-    print --color red 'error: unknown cpu vendor.\n\n' >&2
+    print_error 'unknown cpu vendor.\n\n'
     return 1
     ;;
   esac
 
   if [[ "${install_filesystem_utility_packages}" == 'true' ]]; then
-    system_packages+=("${FILESYSTEM_UTILITY_PACKAGES[@]}")
+    system_packages+=("${filesystem_utility_packages[@]}")
   fi
 
   system_packages+=("${editor_package}")
 
   if [[ "${install_driver_packages}" == 'true' ]]; then
-    system_packages+=("${COMMON_DRIVER_PACKAGES[@]}")
+    system_packages+=("${common_driver_packages[@]}")
   fi
 
   if [[ "${install_pipewire_packages}" == 'true' ]]; then
-    system_packages+=("${PIPEWIRE_PACKAGES[@]}")
+    system_packages+=("${pipewire_packages[@]}")
   fi
 
   # ----  checks  --------------------------------------------------------------
 
   if ! is_uefi; then
-    print --color red 'error: system not booted in uefi mode.\n\n' >&2
+    print_error 'system not booted in uefi mode.\n\n'
     return 1
   fi
 
   if ! is_connected; then
-    print --color red 'error: unable to connect to the internet.\n\n' >&2
+    print_error 'unable to connect to the internet.\n\n'
     return 1
   fi
 
   if [[ ! -e "${BASH_SOURCE%/*}/configure.sh" ]]; then
-    print --color red "error: 'configure.sh' not found.\\n\\n" >&2
+    print_error "'configure.sh' not found.\n\n"
     return 1
   fi
 
   # ----  input  ---------------------------------------------------------------
 
   target_disk="$(input_target_disk)"
-
-  if [[ -z "${target_disk}" ]]; then
-    return 1
-  fi
 
   case "${target_disk}" in
   /dev/sd*)
@@ -153,17 +141,21 @@ main() {
     root_partition="${target_disk}p2"
     boot_partition="${target_disk}p1"
     ;;
+  *)
+    print_error 'invalid disk.\n\n'
+    return 1
+    ;;
   esac
 
-  if [[ "${swap}" == 'true' ]]; then
-    swap_size="$(input_swap_size)"
-  fi
+  [[ "${swap}" == 'true' ]] && swap_size="$(input_swap_size)"
 
-  readarray -t reflector_options < <(input_reflector_options)
+  reflector_country="$(input_reflector_country)" || return 1
 
-  if [[ "${#reflector_options[@]}" -eq 0 ]]; then
-    return 1
-  fi
+  reflector_options=(
+    '--save' '/etc/pacman.d/mirrorlist'
+    '--sort' 'score'
+    '--country' "${reflector_country}"
+  )
 
   if [[ "${install_driver_packages}" == 'true' ]]; then
     readarray -t driver_packages < <(input_driver_packages)
@@ -173,127 +165,135 @@ main() {
   readarray -t optional_packages < <(input_optional_packages)
   system_packages+=("${optional_packages[@]}")
 
-  print --color yellow 'warning: installation will wipe target disk.\n\n'
-  if ! confirm 'proceed with installation?'; then
-    return 0
+  time_zone="$(input_time_zone)"
+
+  locale="$(input_locale)"
+  lang="${locale%%[[:space:]]*}"
+
+  hostname="$(input_hostname)"
+
+  if [[ "${create_user}" == 'true' ]]; then
+    user_name="$(input_user_name)"
+    user_password="$(input_user_password)"
   fi
+
+  root_password="$(input_root_password)"
+
+  declare -p
+
+  print_warning 'installation will wipe target disk.\n\n'
+  confirm 'proceed with installation?' || return
 
   # ----  installation  --------------------------------------------------------
 
   if ! is_clock_synced; then
-    print --color cyan 'info: attempting to sync system clock...\n\n'
-    sync_clock || {
-      print --color red 'error: failed to sync system clock.\n\n' >&2
+    print_info 'attempting to sync system clock...\n\n'
+    if ! sync_clock; then
+      print_error 'failed to sync system clock.\n\n'
       return 1
-    }
+    fi
   fi
 
-  print --color cyan 'info: partitioning disk...\n\n'
-  partition_disk "${target_disk}" || {
-    print --color red 'error: failed to partition disk.\n\n' >&2
+  print_info 'partitioning disk...\n\n'
+  if ! partition_disk "${target_disk}"; then
+    print_error 'failed to partition disk.\n\n'
     return 1
-  }
+  fi
 
-  print --color cyan 'info: formatting partitions...\n\n'
-  format_partitions "${root_partition}" "${boot_partition}" || {
-    print --color red 'error: failed to format partitions.\n\n' >&2
+  print_info 'formatting partitions...\n\n'
+  if ! format_partitions "${root_partition}" "${boot_partition}"; then
+    print_error 'failed to format partitions.\n\n'
     return 1
-  }
+  fi
 
-  print --color cyan 'info: mounting file systems...\n\n'
-  mount_file_systems "${root_partition}" "${boot_partition}" || {
-    print --color red 'error: failed to mount file systems.\n\n' >&2
+  print_info 'mounting file systems...\n\n'
+  if ! mount_file_systems "${root_partition}" "${boot_partition}"; then
+    print_error 'failed to mount file systems.\n\n'
     return 1
-  }
+  fi
 
   if [[ "${swap}" == 'true' ]]; then
-    print --color cyan 'info: creating swap...\n\n'
-    create_swap "${swap_size}" || {
-      print --color red 'error: failed to create swap.\n\n' >&2
+    print_info 'creating swap...\n\n'
+    if ! create_swap "${swap_size}"; then
+      print_error 'failed to create swap.\n\n'
       return 1
-    }
+    fi
   fi
 
-  print --color cyan 'info: updating mirror list...\n\n'
-  update_mirror_list "${reflector_options[@]}" || {
-    print --color red 'error: failed to update mirror list.\n\n' >&2
+  print_info 'updating mirror list...\n\n'
+  if ! update_mirror_list "${reflector_options[@]}"; then
+    print_error 'failed to update mirror list.\n\n'
     return 1
-  }
+  fi
 
-  print --color cyan 'info: installing system packages...\n\n'
-  install_system_packages "${system_packages[@]}" || {
-    print --color red 'error: failed to install system packages.\n\n' >&2
+  print_info 'installing system packages...\n\n'
+  if ! install_system_packages "${system_packages[@]}"; then
+    print_error 'failed to install system packages.\n\n'
     return 1
-  }
+  fi
 
-  print --color cyan 'info: generating fstab...\n\n'
-  generate_fstab || {
-    print --color red 'error: failed to generate fstab.\n\n' >&2
+  print_info 'generating fstab...\n\n'
+  if ! generate_fstab; then
+    print_error 'failed to generate fstab.\n\n'
     return 1
-  }
+  fi
 
-  print --color cyan 'info: configuring system...\n\n'
-  configure_system || {
-    print --color red 'error: failed to configure system.\n\n' >&2
+  print_info 'configuring system...\n\n'
+  if ! configure_system; then
+    print_error 'failed to configure system.\n\n'
     return 1
-  }
+  fi
 
-  print --color cyan 'info: installation completed.\n\n'
+  print_info 'installation completed.\n\n'
 }
 
 # ------------------------------------------------------------------------------
 #       input functions
 # ------------------------------------------------------------------------------
 
-confirm() {
+# usage: scan [--password] prompt
+scan() {
   local prompt="$1"
   local input=''
+  local password='false'
 
-  while true; do
-    print --color cyan "${prompt} [y/n]: " >&2
-    read -r input
-    print '\n' >&2
-
-    case "${input,,}" in
-    y | yes)
-      return 0
-      ;;
-    n | no)
-      return 1
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+    --password)
+      password='true'
+      shift
       ;;
     *)
-      print --color red 'error: invalid input. try again.\n\n' >&2
+      prompt="$1"
+      shift
       ;;
     esac
   done
+
+  print --color cyan "${prompt}" >&2
+  if [[ "${password}" == 'true' ]]; then
+    read -rs input
+    print '\n\n' >&2
+  else
+    read -r input
+    print '\n' >&2
+  fi
+
+  print "${input}"
 }
 
 input_target_disk() {
   local target_disk=''
-  local disks=''
 
-  disks="$(list_disks)" || {
-    print --color red 'error: failed to get disks.\n\n' >&2
-    return 1
-  }
-
-  print --color cyan 'disks:\n' >&2
-  printf '%s' "${disks}" | sed 's/^/  - /' >&2
-  printf '\n\n' >&2
+  list_disks >&2
 
   while true; do
-    print --color cyan 'enter target disk (e.g., "/dev/sda"): ' >&2
-    read -r target_disk
-    print '\n' >&2
-
-    if target_disk="$(is_disk_valid "${target_disk}" "${disks}")"; then
-      break
-    else
-      print --color red 'error: invalid disk. try again.\n\n' >&2
-    fi
+    target_disk="$(scan 'enter target disk (e.g., "/dev/sda"): ')"
+    target_disk="$(is_disk_valid "${target_disk}")" && break
+    print_error 'invalid disk. try again.\n\n'
   done
 
-  printf '%s' "${target_disk}"
+  print "${target_disk}"
 }
 
 input_swap_size() {
@@ -302,110 +302,197 @@ input_swap_size() {
   local suffix=''
 
   while true; do
-    print --color cyan 'enter swap size (e.g., "8G"): ' >&2
-    read -r swap_size
-    print '\n' >&2
-
+    swap_size="$(scan 'enter swap size (e.g., "8g"): ')"
     number="${swap_size%%[^[:digit:]]*}"
     suffix="${swap_size##*[[:digit:]]}"
 
     if [[ "${swap_size}" =~ ^[[:digit:]]+[[:alpha:]]+$ ]]; then
       case "${suffix,,}" in
       g | gb | gib)
-        swap_size="${number}GiB"
+        suffix="GiB"
         break
         ;;
       m | mb | mib)
-        swap_size="${number}MiB"
+        suffix="MiB"
         break
         ;;
       *)
-        print --color red 'error: invalid suffix. try again.\n\n' >&2
+        print_error 'invalid suffix. try again.\n\n'
         ;;
       esac
     else
-      print --color red 'error: invalid swap size. try again.\n\n' >&2
+      print_error 'invalid swap size. try again.\n\n'
     fi
   done
 
-  printf '%s' "${swap_size}"
+  swap_size="${number}${suffix}"
+
+  print "${swap_size}"
 }
 
-input_reflector_options() {
-  local reflector_options=()
+input_reflector_country() {
   local country=''
+
   local countries=''
+  countries="$(list_countries)" || return 1
 
-  countries="$(list_countries)" || {
-    print --color red 'error: failed to get countries.\n\n' >&2
-    return 1
-  }
-
-  print --color cyan 'info: enter a country ' >&2
-  print --color cyan 'to use as filter for reflector.\n' >&2
-
-  print --color cyan "info: enter 'l' to list countries. " >&2
-  print --color cyan "enter 'q' to return.\\n\\n" >&2
+  print_info 'enter a country to use as filter for reflector.\n' >&2
+  print_info "enter 'l' to list countries. enter 'q' to return.\n\n" >&2
 
   while true; do
-    print --color cyan 'enter a country (e.g., "Japan"): ' >&2
-    read -r country
-    print '\n' >&2
+    country="$(scan 'enter a country (e.g., "japan"): ')"
 
-    case "${country}" in
-    l)
-      print "${countries}" |
-        column --fillrows |
-        less --clear-screen --tilde >&2
-      ;;
-    *)
-      if country="$(is_country_valid "${country}" "${countries}")"; then
-        break
-      else
-        print --color red 'error: invalid country. try again.\n\n' >&2
-      fi
-      ;;
-    esac
+    if [[ "${country}" == 'l' ]]; then
+      column <<<"${countries}" | less --clear-screen --tilde >&2
+    else
+      country="$(is_country_valid "${country}" "${countries}")" && break
+      print_error 'invalid country. try again.\n\n'
+    fi
   done
 
-  if [[ "${country}" == *' '* ]]; then
-    country="'${country}'"
-  fi
+  [[ "${country}" == *[[:space:]]* ]] && country="'${country}'"
 
-  reflector_options=(
-    '--save' '/etc/pacman.d/mirrorlist'
-    '--sort' 'score'
-    '--country' "${country}"
-  )
+  print "${country}"
+}
 
-  printf '%s\n' "${reflector_options[@]}"
+confirm() {
+  local prompt="$1"
+  local input=''
+
+  while true; do
+    input="$(scan "${prompt} [y/n]: ")"
+
+    case "${input,,}" in
+    y | yes) return 0 ;;
+    n | no) return 1 ;;
+    *) print_error 'invalid input. try again.\n\n' ;;
+    esac
+  done
 }
 
 input_driver_packages() {
+  local amd_driver_packages=('vulkan-radeon')
+  local intel_driver_packages=('vulkan-intel')
   local driver_packages=()
 
   if confirm 'install amd driver packages?'; then
-    driver_packages+=("${AMD_DRIVER_PACKAGES[@]}")
+    driver_packages+=("${amd_driver_packages[@]}")
   fi
 
   if confirm 'install intel driver packages?'; then
-    driver_packages+=("${INTEL_DRIVER_PACKAGES[@]}")
+    driver_packages+=("${intel_driver_packages[@]}")
   fi
 
-  printf '%s\n' "${driver_packages[@]}"
+  local package=''
+  for package in "${driver_packages[@]}"; do
+    print "${package}\n"
+  done
 }
 
 input_optional_packages() {
-  local optional_packages=()
+  local optional_packages=('base-devel' 'git' 'openssh' 'sof-firmware')
+  local packages=()
   local package=''
 
-  for package in "${OPTIONAL_PACKAGES[@]}"; do
-    if confirm "install ${package}?"; then
-      optional_packages+=("${package}")
+  for package in "${optional_packages[@]}"; do
+    confirm "install ${package}?" && packages+=("${package}")
+  done
+
+  for package in "${packages[@]}"; do
+    print "${package}\n"
+  done
+}
+
+input_time_zone() {
+  local time_zone=''
+
+  print_info "enter 'l' to list time zones. enter 'q' to exit.\n\n" >&2
+
+  while true; do
+    time_zone="$(scan 'enter time zone (e.g., "asia/tokyo"): ')"
+
+    if [[ "${time_zone}" == 'l' ]]; then
+      get_time_zones | column | less --clear-screen --tilde >&2
+    else
+      time_zone="$(is_time_zone_valid "${time_zone}")" && break
+      print_error 'invalid time zone. try again.\n\n'
     fi
   done
 
-  printf '%s\n' "${optional_packages[@]}"
+  print "${time_zone}"
+}
+
+input_locale() {
+  local locale=''
+
+  print_info "enter 'l' to list locales. enter 'q' to exit.\n\n" >&2
+
+  while true; do
+    locale="$(scan 'enter locale (e.g., "en_us.utf-8 utf-8"): ')"
+
+    if [[ "${locale}" == 'l' ]]; then
+      get_locales | column | less --clear-screen --tilde >&2
+    else
+      locale="$(is_locale_valid "${locale}")" && break
+      print_error 'invalid locale. try again.\n\n'
+    fi
+  done
+
+  print "${locale}"
+}
+
+input_hostname() {
+  local hostname=''
+
+  while true; do
+    hostname="$(scan 'enter hostname (e.g., archlinux): ')"
+    [[ -n "${hostname}" ]] && break
+    print_error 'invalid hostname. try again.\n\n'
+  done
+
+  print "${hostname}"
+}
+
+input_user_name() {
+  local user_name=''
+
+  while true; do
+    user_name="$(scan 'enter user name: ')"
+    [[ -n "${user_name}" ]] && break
+    print_error 'invalid user name. try again.\n\n'
+  done
+
+  print "${user_name}"
+}
+
+input_user_password() {
+  local user_password=''
+  local reentered_password=''
+
+  while true; do
+    user_password="$(scan --password 'enter user password: ')"
+    reentered_password="$(scan --password 'reenter user password: ')"
+
+    [[ "${user_password}" == "${reentered_password}" ]] && break
+    print_error 'passwords do not match. try again.\n\n'
+  done
+
+  print "${user_password}"
+}
+
+input_root_password() {
+  local root_password=''
+  local reentered_password=''
+
+  while true; do
+    root_password="$(scan --password 'enter root password: ')"
+    reentered_password="$(scan --password 'reenter user password: ')"
+
+    [[ "${root_password}" == "${reentered_password}" ]] && break
+    print_error 'passwords do not match. try again.\n\n'
+  done
+
+  print "${root_password}"
 }
 
 # ------------------------------------------------------------------------------
@@ -424,12 +511,12 @@ sync_clock() {
   )
 
   mkdir --parents "${config_directory}" || return 1
-  printf '[Time]\nNTP=%s\n' "${ntp_servers[*]}" >"${config_path}" || return 1
+  print "[Time]\nNTP=${ntp_servers[*]}\n" >"${config_path}" || return 1
   systemctl restart systemd-timesyncd.service || return 1
 
-  local interval=5
   local retries=0
   local max_retries=3
+  local interval=5
 
   until is_clock_synced; do
     ((++retries > max_retries)) && return 1
@@ -477,11 +564,12 @@ update_mirror_list() {
 
   local retries=0
   local max_retries=3
+  local interval=5
 
   until reflector "${reflector_options[@]}"; do
     ((++retries > max_retries)) && return 1
-    print --color red 'error: failed to update mirror list. ' >&2
-    print --color red 'retrying...\n\n' >&2
+    print_error 'failed to update mirror list. retrying...\n\n'
+    sleep "${interval}"
   done
 }
 
@@ -492,11 +580,12 @@ install_system_packages() {
 
   local retries=0
   local max_retries=3
+  local interval=5
 
   until pacstrap -K /mnt "${system_packages[@]}"; do
     ((++retries > max_retries)) && return 1
-    print --color red 'error: failed to install system packages. ' >&2
-    print --color red 'retrying...\n\n' >&2
+    print_error 'failed to install system packages. retrying...\n\n'
+    sleep "${interval}"
   done
 }
 
@@ -505,16 +594,14 @@ generate_fstab() {
 }
 
 configure_system() {
-  local source_script_path=''
-  local copied_script_path=''
+  local source_script_path="${BASH_SOURCE%/*}/configure.sh"
+  local copied_script_path='/root/configure.sh'
   local exit_status=0
-
-  source_script_path="${BASH_SOURCE%/*}/configure.sh"
-  copied_script_path='/root/configure.sh'
 
   cp --force "${source_script_path}" "/mnt/${copied_script_path}" || return 1
   arch-chroot /mnt /bin/bash "${copied_script_path}" || exit_status=1
   rm --force "/mnt/${copied_script_path}" || return 1
+
   return "${exit_status}"
 }
 
@@ -523,45 +610,27 @@ configure_system() {
 # ------------------------------------------------------------------------------
 
 is_uefi() {
-  if ls /sys/firmware/efi/efivars &>/dev/null; then
-    return 0
-  else
-    return 1
-  fi
+  ls /sys/firmware/efi/efivars &>/dev/null || return 1
 }
 
 is_connected() {
-  if ping -c 1 -W 5 archlinux.org &>/dev/null; then
-    return 0
-  else
-    return 1
-  fi
+  ping -c 1 -W 5 archlinux.org &>/dev/null || return 1
 }
 
 is_clock_synced() {
-  if [[ "$(timedatectl show -P NTPSynchronized)" == 'yes' ]]; then
-    return 0
-  else
-    return 1
-  fi
+  [[ "$(timedatectl show -P NTPSynchronized)" == 'yes' ]] || return 1
 }
 
 is_disk_valid() {
   local disk="$1"
-  local disks="$2"
   local match=''
 
   match="$(awk -v disk="${disk}" '
     BEGIN { IGNORECASE = 1 }
     $1 == disk { print $1 ; exit }
-  ' <<<"${disks}")"
+  ' <<<"$(get_disks)")"
 
-  if [[ -n "${match}" && "${match}" =~ ^/dev/(sd|nvme|mmcblk) ]]; then
-    printf '%s' "${match}"
-    return 0
-  else
-    return 1
-  fi
+  [[ "${match}" =~ ^/dev/(sd|nvme|mmcblk) ]] && print "${match}" || return 1
 }
 
 is_country_valid() {
@@ -574,12 +643,30 @@ is_country_valid() {
     $0 == country { print $0 ; exit }
   ' <<<"${countries}")"
 
-  if [[ -n "${match}" ]]; then
-    printf '%s' "${match}"
-    return 0
-  else
-    return 1
-  fi
+  [[ -n "${match}" ]] && print "${match}" || return 1
+}
+
+is_time_zone_valid() {
+  local time_zone="$1"
+  local match
+
+  match="$(awk -v time_zone="${time_zone}" '
+    BEGIN { IGNORECASE = 1 }
+    $0 == time_zone { print $0 ; exit }
+  ' <<<"$(get_time_zones)")"
+
+  [[ -n "${match}" ]] && print "${match}" || return 1
+}
+
+is_locale_valid() {
+  local locale="$1"
+
+  match="$(awk -v locale="${locale}" '
+    BEGIN { IGNORECASE = 1 }
+    $0 == locale { print $0 ; exit }
+  ' <<<"$(get_locales)")"
+
+  [[ -n "${match}" ]] && print "${match}" || return 1
 }
 
 # ------------------------------------------------------------------------------
@@ -605,35 +692,87 @@ print() {
   done
 
   if [[ -n "${color}" ]]; then
-    local color_code="${COLOR_CODES[${color}]}"
-    printf '\033[1;%sm%b\033[0m' "${color_code}" "${message}"
+    declare -Ar color_codes=(
+      [black]=30
+      [red]=31
+      [green]=32
+      [yellow]=33
+      [blue]=34
+      [magenta]=35
+      [cyan]=36
+      [white]=37
+    )
+
+    local color_code="${color_codes[${color}]}"
+    local color_sequence="\\033[1;${color_code}m"
+    local reset_sequence='\033[0m'
+
+    printf '%b' "${color_sequence}${message}${reset_sequence}"
   else
     printf '%b' "${message}"
   fi
+}
+
+print_info() {
+  local message="$1"
+  print --color cyan "info: ${message}"
+}
+
+print_warning() {
+  local message="$1"
+  print --color yellow "warning: ${message}"
+}
+
+print_error() {
+  local message="$1"
+  print --color red "error: ${message}" >&2
 }
 
 get_vendor_id() {
   awk '/vendor_id/ { print $NF ; exit }' /proc/cpuinfo
 }
 
-list_disks() {
+get_disks() {
   local disks=''
   local lsblk_options=('--nodeps' '--noheadings' '--output' 'PATH,MODEL')
 
-  disks="$(lsblk "${lsblk_options[@]}" 2>/dev/null)" || return 1
+  disks="$(lsblk "${lsblk_options[@]}")"
 
   awk '$1 ~ "^/dev/(sd|nvme|mmcblk)"' <<<"${disks}"
+}
+
+list_disks() {
+  local disk=''
+
+  print --color cyan 'disks:\n'
+
+  while read -r disk; do
+    print "  - ${disk}\n"
+  done <<<"$(get_disks)"
+
+  print '\n'
 }
 
 list_countries() {
   local countries=''
 
-  countries="$(reflector --list-countries 2>/dev/null)" || return 1
+  if ! countries="$(reflector --list-countries 2>/dev/null)"; then
+    print_error 'failed to get countries.\n\n'
+    return 1
+  fi
 
   awk '
-    BEGIN { FS="[ ]{2,}" }
+    BEGIN { FS="[[:space:]]{2,}" }
     FNR > 2 { print $1 }
   ' <<<"${countries}"
+}
+
+get_time_zones() {
+  timedatectl list-timezones
+}
+
+get_locales() {
+  cat /usr/share/i18n/SUPPORTED
 }
 
 main
