@@ -1,27 +1,71 @@
 #!/usr/bin/env bash
 
 # ------------------------------------------------------------------------------
+#       constants
+# ------------------------------------------------------------------------------
+
+BASE_SYSTEM_PACKAGES=(
+  'base'
+  'bash'
+  'bash-completion'
+  'linux'
+  'linux-firmware'
+  'man-db'
+  'man-pages'
+  'nano'
+  'networkmanager'
+  'pacman-contrib'
+  'reflector'
+  'sudo'
+  'texinfo'
+)
+
+FILESYSTEM_UTILITY_PACKAGES=(
+  'dosfstools'
+  'e2fsprogs'
+  'exfatprogs'
+  'ntfs-3g'
+)
+
+COMMON_DRIVER_PACKAGES=('mesa' 'xorg-server')
+AMD_DRIVER_PACKAGES=('vulkan-radeon')
+INTEL_DRIVER_PACKAGES=('vulkan-intel')
+
+PIPEWIRE_PACKAGES=(
+  'pipewire'
+  'pipewire-alsa'
+  'pipewire-audio'
+  'pipewire-jack'
+  'pipewire-pulse'
+  'wireplumber'
+)
+
+OPTIONAL_PACKAGES=(
+  'base-devel'
+  'git'
+  'openssh'
+  'sof-firmware'
+)
+
+NTP_SERVERS=(
+  '0.pool.ntp.org'
+  '1.pool.ntp.org'
+  '2.pool.ntp.org'
+  '3.pool.ntp.org'
+)
+
+# ------------------------------------------------------------------------------
 #       main function
 # ------------------------------------------------------------------------------
 
 main() {
   print '\n'
 
-  # ----  configuration  -------------------------------------------------------
-
-  local create_user='true'
-  local editor_package='nano'
-  local swap='true'
-  local install_filesystem_utility_packages='true'
-  local install_driver_packages='true'
-  local install_pipewire_packages='true'
-
   # ----  variables  -----------------------------------------------------------
 
   local target_disk=''
   local root_partition=''
   local boot_partition=''
-
   local swap_size=''
 
   local reflector_country=''
@@ -31,52 +75,21 @@ main() {
   local driver_packages=()
   local optional_packages=()
 
-  local base_system_packages=(
-    'base'
-    'bash'
-    'bash-completion'
-    'linux'
-    'linux-firmware'
-    'man-db'
-    'man-pages'
-    'networkmanager'
-    'pacman-contrib'
-    'reflector'
-    'sudo'
-    'texinfo'
-  )
-
-  local filesystem_utility_packages=(
-    'dosfstools'
-    'e2fsprogs'
-    'exfatprogs'
-    'ntfs-3g'
-  )
-
-  local common_driver_packages=('mesa' 'xorg-server')
-
-  local pipewire_packages=(
-    'pipewire'
-    'pipewire-alsa'
-    'pipewire-audio'
-    'pipewire-jack'
-    'pipewire-pulse'
-    'wireplumber'
-  )
-
   local time_zone=''
-
   local locale=''
   local lang=''
-
   local hostname=''
 
   local user_name=''
   local user_password=''
-
   local root_password=''
 
-  system_packages+=("${base_system_packages[@]}")
+  system_packages+=(
+    "${BASE_SYSTEM_PACKAGES[@]}"
+    "${FILESYSTEM_UTILITY_PACKAGES[@]}"
+    "${COMMON_DRIVER_PACKAGES[@]}"
+    "${PIPEWIRE_PACKAGES[@]}"
+  )
 
   case "$(get_vendor_id)" in
   AuthenticAMD)
@@ -92,20 +105,6 @@ main() {
     return 1
     ;;
   esac
-
-  if [[ "${install_filesystem_utility_packages}" == 'true' ]]; then
-    system_packages+=("${filesystem_utility_packages[@]}")
-  fi
-
-  system_packages+=("${editor_package}")
-
-  if [[ "${install_driver_packages}" == 'true' ]]; then
-    system_packages+=("${common_driver_packages[@]}")
-  fi
-
-  if [[ "${install_pipewire_packages}" == 'true' ]]; then
-    system_packages+=("${pipewire_packages[@]}")
-  fi
 
   # ----  checks  --------------------------------------------------------------
 
@@ -147,36 +146,30 @@ main() {
     ;;
   esac
 
-  [[ "${swap}" == 'true' ]] && swap_size="$(input_swap_size)"
+  swap_size="$(input_swap_size)"
 
   reflector_country="$(input_reflector_country)" || return 1
-
   reflector_options=(
     '--save' '/etc/pacman.d/mirrorlist'
-    '--sort' 'score'
+    '--sort' 'age'
+    '--latest' '5'
+    '--protocol' 'https'
     '--country' "${reflector_country}"
   )
 
-  if [[ "${install_driver_packages}" == 'true' ]]; then
-    readarray -t driver_packages < <(input_driver_packages)
-    system_packages+=("${driver_packages[@]}")
-  fi
+  readarray -t driver_packages < <(input_driver_packages)
+  system_packages+=("${driver_packages[@]}")
 
   readarray -t optional_packages < <(input_optional_packages)
   system_packages+=("${optional_packages[@]}")
 
   time_zone="$(input_time_zone)"
-
   locale="$(input_locale)"
   lang="${locale%%[[:space:]]*}"
-
   hostname="$(input_hostname)"
 
-  if [[ "${create_user}" == 'true' ]]; then
-    user_name="$(input_user_name)"
-    user_password="$(input_user_password)"
-  fi
-
+  user_name="$(input_user_name)"
+  user_password="$(input_user_password)"
   root_password="$(input_root_password)"
 
   declare -p
@@ -239,7 +232,9 @@ main() {
   fi
 
   print_info 'configuring system...\n\n'
-  if ! configure_system; then
+  if ! configure_system \
+      "${time_zone}" "${locale}" "${lang}" "${hostname}" \
+      "${user_name}" "${user_password}" "${root_password}"; then
     print_error 'failed to configure system.\n\n'
     return 1
   fi
@@ -255,6 +250,7 @@ main() {
 scan() {
   local prompt="$1"
   local input=''
+
   local password='false'
 
   while [[ "$#" -gt 0 ]]; do
@@ -273,10 +269,9 @@ scan() {
   print --color cyan "${prompt}" >&2
   if [[ "${password}" == 'true' ]]; then
     read -rs input
-    print '\n\n' >&2
+    print '\n' >&2
   else
     read -r input
-    print '\n' >&2
   fi
 
   print "${input}"
@@ -289,7 +284,10 @@ input_target_disk() {
 
   while true; do
     target_disk="$(scan 'enter target disk (e.g., "/dev/sda"): ')"
+    print '\n' >&2
+
     target_disk="$(is_disk_valid "${target_disk}")" && break
+
     print_error 'invalid disk. try again.\n\n'
   done
 
@@ -298,11 +296,14 @@ input_target_disk() {
 
 input_swap_size() {
   local swap_size=''
+
   local number=''
   local suffix=''
 
   while true; do
     swap_size="$(scan 'enter swap size (e.g., "8g"): ')"
+    print '\n' >&2
+
     number="${swap_size%%[^[:digit:]]*}"
     suffix="${swap_size##*[[:digit:]]}"
 
@@ -332,8 +333,8 @@ input_swap_size() {
 
 input_reflector_country() {
   local country=''
-
   local countries=''
+
   countries="$(list_countries)" || return 1
 
   print_info 'enter a country to use as filter for reflector.\n' >&2
@@ -341,6 +342,7 @@ input_reflector_country() {
 
   while true; do
     country="$(scan 'enter a country (e.g., "japan"): ')"
+    print '\n' >&2
 
     if [[ "${country}" == 'l' ]]; then
       column <<<"${countries}" | less --clear-screen --tilde >&2
@@ -361,6 +363,7 @@ confirm() {
 
   while true; do
     input="$(scan "${prompt} [y/n]: ")"
+    print '\n' >&2
 
     case "${input,,}" in
     y | yes) return 0 ;;
@@ -371,36 +374,28 @@ confirm() {
 }
 
 input_driver_packages() {
-  local amd_driver_packages=('vulkan-radeon')
-  local intel_driver_packages=('vulkan-intel')
-  local driver_packages=()
+  local packages=()
 
   if confirm 'install amd driver packages?'; then
-    driver_packages+=("${amd_driver_packages[@]}")
+    packages+=("${AMD_DRIVER_PACKAGES[@]}")
   fi
 
   if confirm 'install intel driver packages?'; then
-    driver_packages+=("${intel_driver_packages[@]}")
+    packages+=("${INTEL_DRIVER_PACKAGES[@]}")
   fi
 
-  local package=''
-  for package in "${driver_packages[@]}"; do
-    print "${package}\n"
-  done
+  print "${packages[@]/%/\\n}"
 }
 
 input_optional_packages() {
-  local optional_packages=('base-devel' 'git' 'openssh' 'sof-firmware')
   local packages=()
   local package=''
 
-  for package in "${optional_packages[@]}"; do
+  for package in "${OPTIONAL_PACKAGES[@]}"; do
     confirm "install ${package}?" && packages+=("${package}")
   done
 
-  for package in "${packages[@]}"; do
-    print "${package}\n"
-  done
+  print "${packages[@]/%/\\n}"
 }
 
 input_time_zone() {
@@ -410,6 +405,7 @@ input_time_zone() {
 
   while true; do
     time_zone="$(scan 'enter time zone (e.g., "asia/tokyo"): ')"
+    print '\n' >&2
 
     if [[ "${time_zone}" == 'l' ]]; then
       get_time_zones | column | less --clear-screen --tilde >&2
@@ -429,6 +425,7 @@ input_locale() {
 
   while true; do
     locale="$(scan 'enter locale (e.g., "en_us.utf-8 utf-8"): ')"
+    print '\n' >&2
 
     if [[ "${locale}" == 'l' ]]; then
       get_locales | column | less --clear-screen --tilde >&2
@@ -446,7 +443,10 @@ input_hostname() {
 
   while true; do
     hostname="$(scan 'enter hostname (e.g., archlinux): ')"
+    print '\n' >&2
+
     [[ -n "${hostname}" ]] && break
+
     print_error 'invalid hostname. try again.\n\n'
   done
 
@@ -458,7 +458,10 @@ input_user_name() {
 
   while true; do
     user_name="$(scan 'enter user name: ')"
+    print '\n' >&2
+
     [[ -n "${user_name}" ]] && break
+
     print_error 'invalid user name. try again.\n\n'
   done
 
@@ -472,6 +475,7 @@ input_user_password() {
   while true; do
     user_password="$(scan --password 'enter user password: ')"
     reentered_password="$(scan --password 'reenter user password: ')"
+    print '\n' >&2
 
     [[ "${user_password}" == "${reentered_password}" ]] && break
     print_error 'passwords do not match. try again.\n\n'
@@ -487,6 +491,7 @@ input_root_password() {
   while true; do
     root_password="$(scan --password 'enter root password: ')"
     reentered_password="$(scan --password 'reenter user password: ')"
+    print '\n' >&2
 
     [[ "${root_password}" == "${reentered_password}" ]] && break
     print_error 'passwords do not match. try again.\n\n'
@@ -500,18 +505,9 @@ input_root_password() {
 # ------------------------------------------------------------------------------
 
 sync_clock() {
-  local config_directory='/etc/systemd/timesyncd.conf.d'
-  local config_path="${config_directory}/ntp.conf"
-
-  local ntp_servers=(
-    '1.pool.ntp.org'
-    '0.pool.ntp.org'
-    '2.pool.ntp.org'
-    '3.pool.ntp.org'
-  )
-
-  mkdir --parents "${config_directory}" || return 1
-  print "[Time]\nNTP=${ntp_servers[*]}\n" >"${config_path}" || return 1
+  mkdir --parents "/etc/systemd/timesyncd.conf.d" || return 1
+  print "[Time]\nNTP=${NTP_SERVERS[*]}\n" > \
+    "/etc/systemd/timesyncd.conf.d/ntp.conf" || return 1
   systemctl restart systemd-timesyncd.service || return 1
 
   local retries=0
@@ -526,14 +522,9 @@ sync_clock() {
 
 partition_disk() {
   local disk="$1"
-  local partition_layout='size=1GiB, type=uefi\n type=linux'
-  local sfdisk_options=(
-    '--wipe' 'always'
-    '--wipe-partitions' 'always'
-    '--label' 'gpt'
-  )
 
-  sfdisk "${sfdisk_options[@]}" "${disk}" <<<"${partition_layout}" || return 1
+  sfdisk --wipe always --wipe-partitions always --label gpt "${disk}" \
+    <<<'size=1GiB, type=uefi\n type=linux' || return 1
 }
 
 format_partitions() {
@@ -673,8 +664,9 @@ is_locale_valid() {
 #       output functions
 # ------------------------------------------------------------------------------
 
-# usage: print [--color color] message
+# usage: print [--color color] messages ...
 print() {
+  local messages=()
   local message=''
   local color=''
 
@@ -685,7 +677,7 @@ print() {
       shift 2
       ;;
     *)
-      message="$1"
+      messages+=("$1")
       shift
       ;;
     esac
@@ -707,9 +699,17 @@ print() {
     local color_sequence="\\033[1;${color_code}m"
     local reset_sequence='\033[0m'
 
-    printf '%b' "${color_sequence}${message}${reset_sequence}"
+    printf '%b' "${color_sequence}"
+
+    for message in "${messages[@]}"; do
+      printf '%b' "${message}"
+    done
+
+    printf '%b' "${reset_sequence}"
   else
-    printf '%b' "${message}"
+    for message in "${messages[@]}"; do
+      printf '%b' "${message}"
+    done
   fi
 }
 
@@ -744,8 +744,7 @@ get_disks() {
 list_disks() {
   local disk=''
 
-  print --color cyan 'disks:\n'
-
+  print --color cyan 'disks: \n'
   while read -r disk; do
     print "  - ${disk}\n"
   done <<<"$(get_disks)"
