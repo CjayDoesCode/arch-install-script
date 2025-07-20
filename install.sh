@@ -57,7 +57,6 @@ main() {
 
   local time_zone=''
   local locale=''
-  local lang=''
   local hostname=''
 
   local user_name=''
@@ -142,7 +141,6 @@ main() {
 
   time_zone="$(input_time_zone)"
   locale="$(input_locale)"
-  lang="${locale%%[[:space:]]*}"
   hostname="$(input_hostname)"
 
   user_name="$(input_user_name)"
@@ -150,11 +148,9 @@ main() {
   root_password="$(input_root_password)"
 
   passed_variables=(
-    "${time_zone}" "${locale}" "${lang}" "${hostname}"
-    "${user_name}" "${user_password}" "${root_password}"
+    "${time_zone}" "${locale}" "${hostname}" "${user_name}" "${user_password}"
+    "${root_password}" "${root_partition}" "${reflector_country}"
   )
-
-  declare -p
 
   print --color yellow 'warning: installation will wipe target disk.\n\n'
   confirm 'proceed with installation?' || return
@@ -226,8 +222,9 @@ main() {
 
 # usage: scan [--password] prompt
 scan() {
-  local input=''
   local prompt=''
+  local input=''
+
   local password='false'
 
   while [[ "$#" -gt 0 ]]; do
@@ -243,7 +240,7 @@ scan() {
     esac
   done
 
-  print --color cyan "${prompt}" >&2
+  print --color blue "${prompt}" >&2
 
   if [[ "${password}" == 'true' ]]; then
     read -rs input
@@ -252,25 +249,31 @@ scan() {
     read -r input
   fi
 
-  print "${input}"
+  printf '%s' "${input}"
 }
 
 input_target_disk() {
   local target_disk=''
 
-  list_disks >&2
-  print '\n' >&2
+  print --color green "enter 'l' to list disks.\n\n" >&2
 
   while true; do
     target_disk="$(scan 'enter target disk (e.g., "/dev/sda"): ')"
     print '\n' >&2
 
-    target_disk="$(is_disk_valid "${target_disk}")" && break
-
-    print_error 'invalid disk. try again.\n\n'
+    if [[ "${target_disk}" == 'l' ]]; then
+      if list_disks >&2; then
+        print '\n' >&2
+      else
+        print_error 'no available disks found.\n\n'
+      fi
+    else
+      target_disk="$(is_disk_valid "${target_disk}")" && break
+      print_error 'invalid disk. try again.\n\n'
+    fi
   done
 
-  print "${target_disk}"
+  printf '%s' "${target_disk}"
 }
 
 input_swap_size() {
@@ -301,17 +304,21 @@ input_swap_size() {
     print_error 'invalid swap size. try again.\n\n'
   done
 
-  print "${swap_size}"
+  printf '%s' "${swap_size}"
 }
 
 input_reflector_country() {
   local country=''
   local countries=''
 
-  countries="$(list_countries)" || return 1
+  if ! countries="$(get_countries)"; then
+    print_error 'failed to get countries.\n\n'
+    return 1
+  fi
 
-  print --color cyan 'enter a country to use as filter for reflector.\n' >&2
-  print --color cyan "enter 'l' to list countries. enter 'q' to return.\n\n" >&2
+  print --color green 'enter a country to use as filter for reflector.\n' >&2
+  print --color green "enter 'l' to list countries. " >&2
+  print --color green "enter 'q' to return.\n\n" >&2
 
   while true; do
     country="$(scan 'enter a country (e.g., "japan"): ')"
@@ -327,7 +334,7 @@ input_reflector_country() {
 
   [[ "${country}" == *[[:space:]]* ]] && country="'${country}'"
 
-  print "${country}"
+  printf '%s' "${country}"
 }
 
 confirm() {
@@ -354,11 +361,11 @@ confirm() {
 
 input_driver_packages() {
   if confirm 'install amd driver packages?'; then
-    print "${AMD_DRIVER_PACKAGES[@]/%/\\n}"
+    printf '%s\n' "${AMD_DRIVER_PACKAGES[@]}"
   fi
 
   if confirm 'install intel driver packages?'; then
-    print "${INTEL_DRIVER_PACKAGES[@]/%/\\n}"
+    printf '%s\n' "${INTEL_DRIVER_PACKAGES[@]}"
   fi
 }
 
@@ -366,14 +373,15 @@ input_optional_packages() {
   local package=''
 
   for package in "${OPTIONAL_PACKAGES[@]}"; do
-    confirm "install ${package}?" && print "${package}\n"
+    confirm "install ${package}?" && printf '%s\n' "${package}"
   done
 }
 
 input_time_zone() {
   local time_zone=''
 
-  print --color cyan "enter 'l' to list time zones. enter 'q' to exit.\n\n" >&2
+  print --color green "enter 'l' to list time zones. " >&2
+  print --color green "enter 'q' to return.\n\n" >&2
 
   while true; do
     time_zone="$(scan 'enter time zone (e.g., "asia/tokyo"): ')"
@@ -387,13 +395,13 @@ input_time_zone() {
     fi
   done
 
-  print "${time_zone}"
+  printf '%s' "${time_zone}"
 }
 
 input_locale() {
   local locale=''
 
-  print --color cyan "enter 'l' to list locales. enter 'q' to exit.\n\n" >&2
+  print --color green "enter 'l' to list locales. enter 'q' to return.\n\n" >&2
 
   while true; do
     locale="$(scan 'enter locale (e.g., "en_us.utf-8 utf-8"): ')"
@@ -407,7 +415,7 @@ input_locale() {
     fi
   done
 
-  print "${locale}"
+  printf '%s' "${locale}"
 }
 
 input_hostname() {
@@ -417,12 +425,12 @@ input_hostname() {
     hostname="$(scan 'enter hostname (e.g., archlinux): ')"
     print '\n' >&2
 
-    [[ -n "${hostname}" ]] && break
+    is_hostname_valid "${hostname}" && break
 
     print_error 'invalid hostname. try again.\n\n'
   done
 
-  print "${hostname}"
+  printf '%s' "${hostname}"
 }
 
 input_user_name() {
@@ -432,12 +440,12 @@ input_user_name() {
     user_name="$(scan 'enter user name: ')"
     print '\n' >&2
 
-    [[ -n "${user_name}" ]] && break
+    is_user_name_valid "${user_name}" && break
 
     print_error 'invalid user name. try again.\n\n'
   done
 
-  print "${user_name}"
+  printf '%s' "${user_name}"
 }
 
 input_user_password() {
@@ -446,6 +454,12 @@ input_user_password() {
 
   while true; do
     user_password="$(scan --password 'enter user password: ')"
+
+    if ! is_password_valid "${user_password}"; then
+      print '\n' >&2
+      print_error 'invalid password. try again.\n\n'
+    fi
+
     reentered_password="$(scan --password 'reenter user password: ')"
     print '\n' >&2
 
@@ -454,7 +468,7 @@ input_user_password() {
     print_error 'passwords do not match. try again.\n\n'
   done
 
-  print "${user_password}"
+  printf '%s' "${user_password}"
 }
 
 input_root_password() {
@@ -463,7 +477,13 @@ input_root_password() {
 
   while true; do
     root_password="$(scan --password 'enter root password: ')"
-    reentered_password="$(scan --password 'reenter user password: ')"
+
+    if ! is_password_valid "${root_password}"; then
+      print '\n' >&2
+      print_error 'invalid password. try again.\n\n'
+    fi
+
+    reentered_password="$(scan --password 'reenter root password: ')"
     print '\n' >&2
 
     [[ "${root_password}" == "${reentered_password}" ]] && break
@@ -471,7 +491,7 @@ input_root_password() {
     print_error 'passwords do not match. try again.\n\n'
   done
 
-  print "${root_password}"
+  printf '%s' "${root_password}"
 }
 
 # ------------------------------------------------------------------------------
@@ -483,7 +503,7 @@ sync_clock() {
   local config="${config_directory}/ntp.org"
 
   mkdir --parents "${config_directory}" || return 1
-  print "[Time]\nNTP=${NTP_SERVERS[*]}\n" >"${config}" || return 1
+  printf '[Time]\nNTP=%s\n' "${NTP_SERVERS[*]}" >"${config}" || return 1
   systemctl restart systemd-timesyncd.service || return 1
 
   local retries=0
@@ -499,10 +519,14 @@ sync_clock() {
 partition_disk() {
   local disk="$1"
 
-  local sfdisk_options='--wipe always --wipe-partitions always --label gpt'
-  local partition_layout='size=1GiB, type=uefi\n type=linux\n'
+  local sfdisk_options=(
+    '--label' 'gpt'
+    '--wipe' 'always'
+    '--wipe-partitions' 'always'
+  )
 
-  sfdisk "${sfdisk_options}" "${disk}" <<<"${partition_layout}" || return 1
+  printf 'size=1GiB, type=uefi\n, type=linux\n' |
+    sfdisk "${sfdisk_options[@]}" "${disk}" || return 1
 }
 
 format_partitions() {
@@ -523,7 +547,13 @@ mount_file_systems() {
 
 create_swap() {
   local swap_size="$1"
-  mkswap --file /mnt/swapfile --size "${swap_size}" --uuid clear || return 1
+  local mkswap_options=(
+    '--file' '/mnt/swapfile'
+    '--size' "${swap_size}"
+    '--uuid' 'clear'
+  )
+
+  mkswap "${mkswap_options[@]}" || return 1
   swapon /mnt/swapfile || return 1
 }
 
@@ -544,7 +574,7 @@ update_mirror_list() {
 install_system_packages() {
   local system_packages=("$@")
 
-  pacman -Sy --needed --noconfirm archlinux-keyring
+  pacman -Sy --needed --noconfirm archlinux-keyring || return 1
 
   local retries=0
   local max_retries=3
@@ -584,65 +614,99 @@ is_connected() {
 }
 
 is_clock_synced() {
-  [[ "$(timedatectl show -P NTPSynchronized)" == 'yes' ]] || return 1
+  [[ "$(timedatectl show -P NTPSynchronized)" == 'no' ]] && return 1
 }
 
 is_disk_valid() {
   local disk="$1"
-  local match=''
 
-  match="$(awk -v disk="${disk}" '
-    BEGIN { IGNORECASE = 1 }
-    $1 == disk { print $1 ; exit }
-  ' < <(get_disks))"
+  local line=''
 
-  [[ "${match}" =~ ^/dev/(sd|nvme|mmcblk) ]] && print "${match}" || return 1
+  while read -r line; do
+    line="${line%% *}"
+    if [[ "${line,,}" == "${disk,,}" ]]; then
+      printf '%s' "${line}"
+      return
+    fi
+  done < <(get_disks)
+
+  return 1
 }
 
 is_country_valid() {
   local country="$1"
   local countries="$2"
-  local match=''
 
-  match="$(awk -v country="${country}" '
-    BEGIN { IGNORECASE = 1 }
-    $0 == country { print ; exit }
-  ' <<<"${countries}")"
+  local line=''
 
-  [[ -n "${match}" ]] && print "${match}" || return 1
+  while read -r line; do
+    if [[ "${line,,}" == "${country,,}" ]]; then
+      printf '%s' "${line}"
+      return
+    fi
+  done <<<"${countries}"
+
+  return 1
 }
 
 is_time_zone_valid() {
   local time_zone="$1"
-  local match=''
 
-  match="$(awk -v time_zone="${time_zone}" '
-    BEGIN { IGNORECASE = 1 }
-    $0 == time_zone { print ; exit }
-  ' < <(get_time_zones))"
+  local line=''
 
-  [[ -n "${match}" ]] && print "${match}" || return 1
+  while read -r line; do
+    if [[ "${line,,}" == "${time_zone,,}" ]]; then
+      printf '%s' "${line}"
+      return
+    fi
+  done < <(get_time_zones)
+
+  return 1
 }
 
 is_locale_valid() {
   local locale="$1"
-  local match=''
 
-  match="$(awk -v locale="${locale}" '
-    BEGIN { IGNORECASE = 1 }
-    $0 == locale { print ; exit }
-  ' < <(get_locales))"
+  local line=''
 
-  [[ -n "${match}" ]] && print "${match}" || return 1
+  while read -r line; do
+    if [[ "${line,,}" == "${locale,,}" ]]; then
+      printf '%s' "${line}"
+      return
+    fi
+  done < <(get_locales)
+
+  return 1
+}
+
+is_hostname_valid() {
+  local hostname="$1"
+  [[ ! "${hostname}" =~ ^[a-z0-9-]{1,64}$ ]] && return 1
+}
+
+is_user_name_valid() {
+  local user_name="$1"
+
+  if [[ "${user_name}" == -* ]] ||
+    [[ "${#user_name}" -gt 256 ]] ||
+    [[ "${user_name}" =~ ^[0-9]+$ ]] ||
+    [[ ! "${user_name}" =~ ^[a-zA-Z0-9_-]+\$?$ ]]; then
+    return 1
+  fi
+}
+
+is_password_valid() {
+  local password="$1"
+  [[ -z "${password}" ]] && return 1
 }
 
 # ------------------------------------------------------------------------------
 #       output functions
 # ------------------------------------------------------------------------------
 
-# usage: print [--color color] messages ...
+# usage: print [--color color] message
 print() {
-  local messages=()
+  local message=''
   local color=''
 
   while [[ "$#" -gt 0 ]]; do
@@ -652,7 +716,7 @@ print() {
       shift 2
       ;;
     *)
-      messages+=("$1")
+      message="$1"
       shift
       ;;
     esac
@@ -663,17 +727,15 @@ print() {
     local color_sequence="\\033[1;${color_code}m"
     local reset_sequence='\033[0m'
 
-    printf '%b' "${color_sequence}"
-    printf '%b' "${messages[@]}"
-    printf '%b' "${reset_sequence}"
+    printf '%b' "${color_sequence}${message}${reset_sequence}"
   else
-    printf '%b' "${messages[@]}"
+    printf '%b' "${message}"
   fi
 }
 
 print_info() {
   local message="$1"
-  print --color cyan "info: ${message}"
+  print --color green "info: ${message}"
 }
 
 print_error() {
@@ -682,35 +744,62 @@ print_error() {
 }
 
 get_vendor_id() {
-  awk '$1 == "vendor_id" { print $NF ; exit }' /proc/cpuinfo
+  local line=''
+
+  while read -r line; do
+    if [[ "${line}" == vendor_id* ]]; then
+      printf '%s' "${line##* }"
+      return
+    fi
+  done </proc/cpuinfo
 }
 
 get_disks() {
-  local lsblk_options=('--nodeps' '--noheadings' '--output' 'PATH,MODEL')
-  awk '$1 ~ "^/dev/(sd|nvme|mmcblk)"' < <(lsblk "${lsblk_options[@]}")
+  local line=''
+
+  while read -r line; do
+    if [[ "${line}" =~ ^/dev/(sd|nvme|mmcblk) ]]; then
+      printf '%s\n' "${line}"
+    fi
+  done < <(lsblk --nodeps --noheadings --output PATH,MODEL)
 }
 
 list_disks() {
-  local disk=''
+  local line=''
+  local disks=''
 
-  print --color cyan 'disks: \n'
+  disks="$(get_disks)"
+  if [[ -z "${disks}" ]]; then
+    return 1
+  fi
 
-  while read -r disk; do
-    print "  - ${disk}\n"
-  done < <(get_disks)
+  print --color green 'available disks: \n'
+
+  while read -r line; do
+    print "  - ${line}\n"
+  done <<<"${disks}"
 }
 
 get_countries() {
-  if ! reflector --list-countries 2>/dev/null; then
-    print_error 'failed to get countries.\n\n'
-    return 1
-  fi
-}
-
-list_countries() {
   local countries=''
-  countries="$(get_countries)" || return 1
-  awk 'BEGIN { FS="[[:space:]]{2,}" } ; FNR > 2 { print $1 }' <<<"${countries}"
+
+  local retries=0
+  local max_retries=3
+  local interval=5
+
+  until countries=$(reflector --list-countries 2>/dev/null); do
+    ((++retries > max_retries)) && return 1
+    print_error 'failed to get countries. retrying...\n\n'
+    sleep "${interval}"
+  done
+
+  local line=''
+  local count=0
+
+  while read -r line; do
+    ((++count <= 2)) && continue
+    printf '%s\n' "${line%%  *}"
+  done <<<"${countries}"
 }
 
 get_time_zones() {
