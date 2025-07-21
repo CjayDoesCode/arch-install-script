@@ -34,36 +34,3 @@ chmod +x install.sh
 ```bash
 ./install.sh
 ```
-
-## Configuration
-
-| Setting                        | Description                                                |
-| :----------------------------- | :--------------------------------------------------------- |
-| editor_pkg                     | Package for the console text editor. *(default: "helix")*  |
-| silent_boot                    | Include silent boot kernel parameters. *(default: "true")* |
-| create_user                    | Create a user. *(default: "true")*                         |
-| create_swap_file               | Create a swap file. *(default: "true")*                    |
-| install_userspace_util_pkgs    | Install userspace utilities. *(default: "true")*           |
-| install_driver_pkgs            | Install video drivers. *(default: "true")*                 |
-| install_pipewire_pkgs          | Install PipeWire. *(default: "true")*                      |
-
-## Installed Packages
-
-| Package Group         | Packages                                                                                                                                                                              |
-| :-------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| base_system_pkgs      | `intel-ucode\|amd_ucode` `${editor_pkg}` `base` `bash` `bash-completion` `linux` `linux-firmware` `man-db` `man-pages` `networkmanager` `pacman-contrib` `reflector` `sudo` `texinfo` |
-| userspace_util_pkgs   | `dosfstools` `e2fsprogs` `exfatprogs` `ntfs-3g`                                                                                                                                       |
-| common_driver_pkgs    | `mesa` `xorg-server`                                                                                                                                                                  |
-| intel_driver_pkgs     | `vulkan-intel`                                                                                                                                                                        |
-| amd_driver_pkgs       | `vulkan-radeon`                                                                                                                                                                       |
-| pipewire_pkgs         | `pipewire` `pipewire-alsa` `pipewire-audio` `pipewire-jack` `pipewire-pulse` `wireplumber`                                                                                            |
-| optional_pkgs         | `base-devel` `git` `openssh` `sof-firmware`                                                                                                                                           |
-
-Either `intel-ucode` or `amd-ucode` is installed, depending on the processor.
-
-## Partition Layout (UEFI/GPT)
-
-| Mount Point | Partition Type          | Size                    |
-| :---------- | :---------------------- | :---------------------- |
-| /boot       | EFI system partition    | 1 GiB                   |
-| /           | Linux x86-64 root (/)   | Remainder of the device |
