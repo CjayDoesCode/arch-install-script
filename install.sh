@@ -765,7 +765,7 @@ get_countries() {
   local count=0
 
   while read -r line; do
-    ((++count <= 1)) && continue
+    ((++count <= 2)) && continue
     printf '%s\n' "${line%%  *}"
   done <<<"${countries}"
 }
