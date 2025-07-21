@@ -600,15 +600,27 @@ configure_system() {
 # ------------------------------------------------------------------------------
 
 is_uefi() {
-  ls /sys/firmware/efi/efivars &>/dev/null || return 1
+  if ls /sys/firmware/efi/efivars &>/dev/null; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 is_connected() {
-  ping -c 1 -W 5 archlinux.org &>/dev/null || return 1
+  if ping -c 1 -W 5 archlinux.org &>/dev/null; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 is_clock_synced() {
-  [[ "$(timedatectl show -P NTPSynchronized)" == 'no' ]] && return 1
+  if [[ "$(timedatectl show -P NTPSynchronized)" == 'yes' ]]; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 is_disk_valid() {
@@ -619,7 +631,7 @@ is_disk_valid() {
     line="${line%% *}"
     if [[ "${line,,}" == "${disk,,}" ]]; then
       printf '%s' "${line}"
-      return
+      return 0
     fi
   done < <(get_disks)
 
@@ -635,7 +647,7 @@ is_country_valid() {
   while read -r line; do
     if [[ "${line,,}" == "${country,,}" ]]; then
       printf '%s' "${line}"
-      return
+      return 0
     fi
   done <<<"${countries}"
 
@@ -649,7 +661,7 @@ is_time_zone_valid() {
   while read -r line; do
     if [[ "${line,,}" == "${time_zone,,}" ]]; then
       printf '%s' "${line}"
-      return
+      return 0
     fi
   done < <(get_time_zones)
 
@@ -663,7 +675,7 @@ is_locale_valid() {
   while read -r line; do
     if [[ "${line,,}" == "${locale,,}" ]]; then
       printf '%s' "${line}"
-      return
+      return 0
     fi
   done < <(get_locales)
 
@@ -672,22 +684,34 @@ is_locale_valid() {
 
 is_hostname_valid() {
   local hostname="$1"
-  [[ ! "${hostname}" =~ ^[a-z0-9-]{1,64}$ ]] && return 1
+
+  if [[ "${hostname}" =~ ^[a-z0-9-]{1,64}$ ]]; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 is_username_valid() {
   local username="$1"
 
-  if [[ "${username}" == -* || "${#username}" -gt 256 ]] ||
-    [[ "${username}" =~ ^[0-9]+$ ]] ||
-    [[ ! "${username}" =~ ^[a-zA-Z0-9_-]+\$?$ ]]; then
+  if [[ "${username}" != -* && "${#username}" -le 256 ]] &&
+    [[ ! "${username}" =~ ^[0-9]+$ ]] &&
+    [[ "${username}" =~ ^[a-zA-Z0-9_-]+\$?$ ]]; then
+    return 0
+  else
     return 1
   fi
 }
 
 is_password_valid() {
   local password="$1"
-  [[ -z "${password}" ]] && return 1
+
+  if [[ -n "${password}" ]]; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 # ------------------------------------------------------------------------------
@@ -737,7 +761,7 @@ get_vendor_id() {
   while read -r line; do
     if [[ "${line}" == vendor_id* ]]; then
       printf '%s' "${line##* }"
-      return
+      return 0
     fi
   done </proc/cpuinfo
 }
