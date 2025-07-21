@@ -37,14 +37,10 @@ main() {
 
   local root_partition="$7"
   local root_partition_uuid=''
-  local kernel_parameters=()
 
-  local reflector_country="$8"
-  local reflector_options=()
+  root_partition_uuid="$(get_root_partition_uuid)"
 
-  root_partition_uuid="$(lsblk --noheadings --output UUID "${root_partition}")"
-
-  kernel_parameters=(
+  local kernel_parameters=(
     "root=UUID=${root_partition_uuid}"
     "rw"
     "quiet"
@@ -53,7 +49,8 @@ main() {
     "rd.udev.log_level=3"
   )
 
-  reflector_options=(
+  local reflector_country="$8"
+  local reflector_options=(
     '--save' '/etc/pacman.d/mirrorlist'
     '--sort' 'age'
     '--latest' '5'
@@ -226,12 +223,12 @@ create_user() {
   local user_password="$2"
 
   useradd --create-home --groups wheel "${user_name}" || return 1
-  printf '%s' "${user_password}" | passwd --stdin "${user_name}" || return 1
+  passwd --stdin "${user_name}" <<<"${user_password}" || return 1
 }
 
 set_root_password() {
   local root_password="$1"
-  printf '%s' "${root_password}" | passwd --stdin root || return 1
+  passwd --stdin root <<<"${root_password}" || return 1
 }
 
 configure_sudo() {
@@ -246,21 +243,21 @@ install_boot_loader() {
 configure_boot_loader() {
   local kernel_parameters=("$@")
 
-  cat <<-LOADER >/boot/loader/loader.conf
+  cat <<-LOADER >/boot/loader/loader.conf || return 1
 		default       arch.conf
 		timeout       0
 		console-mode  max
 		editor        no
 	LOADER
 
-  cat <<-ENTRY >/boot/loader/entries/arch.conf
+  cat <<-ENTRY >/boot/loader/entries/arch.conf || return 1
 		title    Arch Linux
 		linux    /vmlinuz-linux
 		initrd   /initramfs-linux.img
 		options  ${kernel_parameters[*]}
 	ENTRY
 
-  cat <<-ENTRY >/boot/loader/entries/arch-fallback.conf
+  cat <<-ENTRY >/boot/loader/entries/arch-fallback.conf || return 1
 		title    Arch Linux (fallback)
 		linux    /vmlinuz-linux
 		initrd   /initramfs-linux-fallback.img
@@ -269,8 +266,7 @@ configure_boot_loader() {
 }
 
 configure_pacman() {
-  local script='/^#(Color|VerbosePkgLists)/s/^#//'
-  sed -i --regexp-extended "${script}" /etc/pacman.conf || return 1
+  sed -i "/^#\(Color\|VerbosePkgLists\)/s/^#//" /etc/pacman.conf || return 1
 }
 
 set_up_reflector() {
@@ -289,7 +285,7 @@ enable_paccache_timer() {
 #       output functions
 # ------------------------------------------------------------------------------
 
-# usage: print [--color color] messages ...
+# usage: print [--color color] message
 print() {
   local message=''
   local color=''
@@ -308,10 +304,8 @@ print() {
   done
 
   if [[ -n "${color}" ]]; then
-    local color_code="${COLOR_CODES[${color}]}"
-    local color_sequence="\\033[1;${color_code}m"
+    local color_sequence="\\033[1;${COLOR_CODES[${color}]}m"
     local reset_sequence='\033[0m'
-
     printf '%b' "${color_sequence}${message}${reset_sequence}"
   else
     printf '%b' "${message}"
@@ -326,6 +320,10 @@ print_info() {
 print_error() {
   local message="$1"
   print --color red "error: ${message}" >&2
+}
+
+get_root_partition_uuid() {
+  lsblk --noheadings --output UUID "${root_partition}"
 }
 
 main "$@"
