@@ -42,8 +42,8 @@ readonly PIPEWIRE_PACKAGES=(
 readonly OPTIONAL_PACKAGES=('base-devel' 'git' 'openssh' 'sof-firmware')
 
 readonly NTP_SERVERS=(
-  [0]='0.pool.ntp.org' [1]='1.pool.ntp.org'
-  [2]='2.pool.ntp.org' [3]='3.pool.ntp.org'
+  '0.pool.ntp.org' '1.pool.ntp.org'
+  '2.pool.ntp.org' '3.pool.ntp.org'
 )
 
 declare -Ar COLOR_CODES=(
