@@ -5,33 +5,50 @@
 # ------------------------------------------------------------------------------
 
 readonly BASE_SYSTEM_PACKAGES=(
-  'base' 'bash' 'bash-completion' 'helix' 'linux' 'linux-firmware' 'man-db'
-  'man-pages' 'networkmanager' 'pacman-contrib' 'reflector' 'sudo' 'texinfo'
+  'base'
+  'bash'
+  'bash-completion'
+  'helix'
+  'linux'
+  'linux-firmware'
+  'man-db'
+  'man-pages'
+  'networkmanager'
+  'pacman-contrib'
+  'reflector'
+  'sudo'
+  'texinfo'
 )
 
 readonly FILESYSTEM_UTILITY_PACKAGES=(
-  'dosfstools' 'e2fsprogs'
-  'exfatprogs' 'ntfs-3g'
+  'dosfstools'
+  'e2fsprogs'
+  'exfatprogs'
+  'ntfs-3g'
 )
 
-readonly AMD_DRIVER_PACKAGES=('mesa' 'xorg-server' 'vulkan-radeon')
-readonly INTEL_DRIVER_PACKAGES=('mesa' 'xorg-server' 'vulkan-intel')
+readonly AMD_DRIVER_PACKAGES=('mesa' 'vulkan-radeon' 'xorg-server')
+readonly INTEL_DRIVER_PACKAGES=('mesa' 'vulkan-intel' 'xorg-server')
 
 readonly PIPEWIRE_PACKAGES=(
-  'pipewire' 'pipewire-alsa' 'pipewire-audio'
-  'pipewire-jack' 'pipewire-pulse' 'wireplumber'
+  'pipewire'
+  'pipewire-alsa'
+  'pipewire-audio'
+  'pipewire-jack'
+  'pipewire-pulse'
+  'wireplumber'
 )
 
 readonly OPTIONAL_PACKAGES=('base-devel' 'git' 'openssh' 'sof-firmware')
 
 readonly NTP_SERVERS=(
-  '0.pool.ntp.org' '1.pool.ntp.org'
-  '2.pool.ntp.org' '3.pool.ntp.org'
+  [0]='0.pool.ntp.org' [1]='1.pool.ntp.org'
+  [2]='2.pool.ntp.org' [3]='3.pool.ntp.org'
 )
 
 declare -Ar COLOR_CODES=(
-  [black]=30 [red]=31 [green]=32 [yellow]=33
-  [blue]=34 [magenta]=35 [cyan]=36 [white]=37
+  ['black']=30 ['red']=31 ['green']=32 ['yellow']=33
+  ['blue']=34 ['magenta']=35 ['cyan']=36 ['white']=37
 )
 
 # ------------------------------------------------------------------------------
