@@ -283,7 +283,7 @@ input_swap_size() {
     number="${swap_size%%[^[:digit:]]*}"
     suffix="${swap_size##*[[:digit:]]}"
 
-    if [[ "${swap_size}" == "${number}${suffix}" ]]; then
+    if [[ "${swap_size}" =~ ^[[:digit:]]+[[:alpha:]]+$ ]]; then
       case "${suffix,,}" in
       g | gb | gib)
         swap_size="${number}GiB"
@@ -585,27 +585,15 @@ configure_system() {
 # ------------------------------------------------------------------------------
 
 is_uefi() {
-  if ls /sys/firmware/efi/efivars &>/dev/null; then
-    return 0
-  else
-    return 1
-  fi
+  ls /sys/firmware/efi/efivars &>/dev/null || return 1
 }
 
 is_connected() {
-  if ping -c 1 -W 5 archlinux.org &>/dev/null; then
-    return 0
-  else
-    return 1
-  fi
+  ping -c 1 -W 5 archlinux.org &>/dev/null || return 1
 }
 
 is_clock_synced() {
-  if [[ "$(timedatectl show -P NTPSynchronized)" == 'yes' ]]; then
-    return 0
-  else
-    return 1
-  fi
+  [[ "$(timedatectl show -P NTPSynchronized)" == 'yes' ]] || return 1
 }
 
 is_disk_valid() {
@@ -669,20 +657,16 @@ is_locale_valid() {
 
 is_hostname_valid() {
   local hostname="$1"
-
-  if [[ "${hostname}" =~ ^[a-z0-9-]{1,64}$ ]]; then
-    return 0
-  else
-    return 1
-  fi
+  [[ "${hostname}" =~ ^[[:lower:][:digit:]-]{1,64}$ ]] || return 1
 }
 
 is_username_valid() {
   local username="$1"
 
-  if [[ "${username}" != -* && "${#username}" -le 256 ]] &&
-    [[ ! "${username}" =~ ^[0-9]+$ ]] &&
-    [[ "${username}" =~ ^[a-zA-Z0-9_-]+\$?$ ]]; then
+  if [[ "${username}" != -* ]] &&
+    [[ "${#username}" -le 256 ]] &&
+    [[ ! "${username}" =~ ^[[:digit:]]+$ ]] &&
+    [[ "${username}" =~ ^[[:alnum:]_-]+\$?$ ]]; then
     return 0
   else
     return 1
@@ -691,12 +675,7 @@ is_username_valid() {
 
 is_password_valid() {
   local password="$1"
-
-  if [[ -n "${password}" ]]; then
-    return 0
-  else
-    return 1
-  fi
+  [[ -n "${password}" ]] || return 1
 }
 
 # ------------------------------------------------------------------------------
