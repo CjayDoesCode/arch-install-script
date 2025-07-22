@@ -51,26 +51,19 @@ main() {
   local reflector_country=''
   local reflector_options=()
 
+  local microcode_package=''
+
+  if ! microcode_package="$(get_microcode_package)"; then
+    print_error 'unknown cpu vendor.\n\n'
+    return 1
+  fi
+
   local system_packages=(
     "${BASE_SYSTEM_PACKAGES[@]}"
     "${FILESYSTEM_UTILITY_PACKAGES[@]}"
     "${PIPEWIRE_PACKAGES[@]}"
+    "${microcode_package}"
   )
-
-  case "$(get_vendor_id)" in
-  AuthenticAMD)
-    print_info 'detected amd cpu.\n\n'
-    system_packages+=('amd-ucode')
-    ;;
-  GenuineIntel)
-    print_info 'detected intel cpu.\n\n'
-    system_packages+=('intel-ucode')
-    ;;
-  *)
-    print_error 'unknown cpu vendor.\n\n'
-    return 1
-    ;;
-  esac
 
   local driver_packages=()
   local optional_packages=()
@@ -717,6 +710,25 @@ print_info() {
 print_error() {
   local message="$1"
   print --color red "error: ${message}" >&2
+}
+
+get_microcode_package() {
+  local microcode_package=''
+
+  case "$(get_vendor_id)" in
+  AuthenticAMD)
+    microcode_package='amd-ucode'
+    ;;
+  GenuineIntel)
+    microcode_package='intel-ucode'
+    ;;
+  *)
+    print_error 'unknown cpu vendor.\n\n'
+    return 1
+    ;;
+  esac
+
+  printf '%s' "${microcode_package}"
 }
 
 get_vendor_id() {
