@@ -366,7 +366,6 @@ input_driver_packages() {
 
 input_optional_packages() {
   local package=''
-
   for package in "${OPTIONAL_PACKAGES[@]}"; do
     confirm "install ${package}?" && printf '%s\n' "${package}"
   done
@@ -526,6 +525,7 @@ mount_file_systems() {
 
 create_swap() {
   local swap_size="$1"
+
   local mkswap_options=(
     '--file' '/mnt/swapfile'
     '--size' "${swap_size}"
@@ -572,6 +572,7 @@ generate_fstab() {
 
 configure_system() {
   local passed_variables=("$@")
+
   local source_script="${BASH_SOURCE%/*}/configure.sh"
   local script='/root/configure.sh'
 
@@ -598,8 +599,8 @@ is_clock_synced() {
 
 is_disk_valid() {
   local disk="$1"
-  local line=''
 
+  local line=''
   while read -r line; do
     line="${line%% *}"
     if [[ "${line,,}" == "${disk,,}" ]]; then
@@ -616,7 +617,6 @@ is_country_valid() {
   local countries="$2"
 
   local line=''
-
   while read -r line; do
     if [[ "${line,,}" == "${country,,}" ]]; then
       printf '%s' "${line}"
@@ -629,8 +629,8 @@ is_country_valid() {
 
 is_time_zone_valid() {
   local time_zone="$1"
-  local line=''
 
+  local line=''
   while read -r line; do
     if [[ "${line,,}" == "${time_zone,,}" ]]; then
       printf '%s' "${line}"
@@ -643,8 +643,8 @@ is_time_zone_valid() {
 
 is_locale_valid() {
   local locale="$1"
-  local line=''
 
+  local line=''
   while read -r line; do
     if [[ "${line,,}" == "${locale,,}" ]]; then
       printf '%s' "${line}"
@@ -721,7 +721,6 @@ print_error() {
 
 get_vendor_id() {
   local line=''
-
   while read -r line; do
     if [[ "${line}" == vendor_id* ]]; then
       printf '%s' "${line##* }"
@@ -732,14 +731,12 @@ get_vendor_id() {
 
 get_disks() {
   local line=''
-
   while read -r line; do
     [[ "${line}" =~ ^/dev/(sd|nvme|mmcblk) ]] && printf '%s\n' "${line}"
   done < <(lsblk --nodeps --noheadings --output PATH,MODEL)
 }
 
 list_disks() {
-  local line=''
   local disks=''
 
   disks="$(get_disks)"
@@ -747,6 +744,7 @@ list_disks() {
 
   print --color green 'available disks: \n'
 
+  local line=''
   while read -r line; do
     print "  - ${line}\n"
   done <<<"${disks}"
