@@ -5,38 +5,21 @@
 # ------------------------------------------------------------------------------
 
 readonly BASE_SYSTEM_PACKAGES=(
-  'base'
-  'bash'
-  'bash-completion'
-  'helix'
-  'linux'
-  'linux-firmware'
-  'man-db'
-  'man-pages'
-  'networkmanager'
-  'pacman-contrib'
-  'reflector'
-  'sudo'
-  'texinfo'
+  'base' 'bash' 'bash-completion' 'helix' 'linux' 'linux-firmware' 'man-db'
+  'man-pages' 'networkmanager' 'pacman-contrib' 'reflector' 'sudo' 'texinfo'
 )
 
 readonly FILESYSTEM_UTILITY_PACKAGES=(
-  'dosfstools'
-  'e2fsprogs'
-  'exfatprogs'
-  'ntfs-3g'
+  'dosfstools' 'e2fsprogs'
+  'exfatprogs' 'ntfs-3g'
 )
 
 readonly AMD_DRIVER_PACKAGES=('mesa' 'vulkan-radeon' 'xorg-server')
 readonly INTEL_DRIVER_PACKAGES=('mesa' 'vulkan-intel' 'xorg-server')
 
 readonly PIPEWIRE_PACKAGES=(
-  'pipewire'
-  'pipewire-alsa'
-  'pipewire-audio'
-  'pipewire-jack'
-  'pipewire-pulse'
-  'wireplumber'
+  'pipewire' 'pipewire-alsa' 'pipewire-audio'
+  'pipewire-jack' 'pipewire-pulse' 'wireplumber'
 )
 
 readonly OPTIONAL_PACKAGES=('base-devel' 'git' 'openssh' 'sof-firmware')
