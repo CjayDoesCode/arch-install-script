@@ -5,7 +5,7 @@
 # ------------------------------------------------------------------------------
 
 readonly BASE_SYSTEM_PACKAGES=(
-  'base' 'bash' 'bash-completion' 'helix' 'linux' 'linux-firmware' 'man-db'
+  'base' 'bash' 'bash-completion' 'linux' 'linux-firmware' 'man-db'
   'man-pages' 'networkmanager' 'pacman-contrib' 'reflector' 'sudo' 'texinfo'
 )
 
@@ -58,11 +58,26 @@ main() {
     return 1
   fi
 
+  local editor_package='nano'
+
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+    --editor)
+      editor_package="$2"
+      shift 2
+      ;;
+    *)
+      shift
+      ;;
+    esac
+  done
+
   local system_packages=(
     "${BASE_SYSTEM_PACKAGES[@]}"
     "${FILESYSTEM_UTILITY_PACKAGES[@]}"
     "${PIPEWIRE_PACKAGES[@]}"
     "${microcode_package}"
+    "${editor_package}"
   )
 
   local driver_packages=()
@@ -92,6 +107,11 @@ main() {
 
   if [[ ! -e "${BASH_SOURCE%/*}/configure.sh" ]]; then
     print_error "'configure.sh' not found.\n\n"
+    return 1
+  fi
+
+  if ! is_package_available "${editor_package}"; then
+    print_error "'${editor_package}' not found.\n\n"
     return 1
   fi
 
@@ -590,6 +610,17 @@ is_clock_synced() {
   [[ "$(timedatectl show -P NTPSynchronized)" == 'yes' ]] || return 1
 }
 
+is_package_available() {
+  local package="$1"
+
+  local line=''
+  while read -r line; do
+    [[ "${line}" == "${package}" ]] && return 0
+  done < <(pacman -Sqs "^${package}\$")
+
+  return 1
+}
+
 is_disk_valid() {
   local disk="$1"
 
@@ -793,4 +824,4 @@ get_locales() {
   cat /usr/share/i18n/SUPPORTED
 }
 
-main
+main "$@"
