@@ -105,11 +105,6 @@ main() {
     return 1
   fi
 
-  if ! is_connected; then
-    print_error 'no internet connection.\n\n'
-    return 1
-  fi
-
   if ! is_package_available "${editor_package}"; then
     print_error "'${editor_package}' not found.\n\n"
     return 1
@@ -271,10 +266,6 @@ get_configure_script() {
 
 configure_script_exists() {
   [[ ! -e "$(get_configure_script)" ]] || return 1
-}
-
-is_connected() {
-  ping -c 1 -W 5 archlinux.org &>/dev/null || return 1
 }
 
 is_package_available() {
