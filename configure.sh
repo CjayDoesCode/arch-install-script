@@ -207,7 +207,7 @@ print() {
 
 print_info() {
   local message="$1"
-  print --color cyan "info: ${message}"
+  print --color green "info: ${message}"
 }
 
 print_error() {
