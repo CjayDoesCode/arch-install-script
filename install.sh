@@ -100,13 +100,13 @@ main() {
     return 1
   fi
 
-  if ! is_connected; then
-    print_error 'no internet connection.\n\n'
+  if ! configure_script_exists; then
+    print_error "'configure.sh' not found.\n\n"
     return 1
   fi
 
-  if [[ ! -e "${BASH_SOURCE%/*}/configure.sh" ]]; then
-    print_error "'configure.sh' not found.\n\n"
+  if ! is_connected; then
+    print_error 'no internet connection.\n\n'
     return 1
   fi
 
@@ -226,6 +226,244 @@ main() {
   fi
 
   print_info 'installation completed.\n\n'
+}
+
+# ------------------------------------------------------------------------------
+#       helper functions
+# ------------------------------------------------------------------------------
+
+get_vendor_id() {
+  local line=''
+  while read -r line; do
+    if [[ "${line}" == vendor_id* ]]; then
+      printf '%s' "${line##* }"
+      return 0
+    fi
+  done </proc/cpuinfo
+}
+
+get_microcode_package() {
+  local microcode_package=''
+
+  case "$(get_vendor_id)" in
+  AuthenticAMD)
+    microcode_package='amd-ucode'
+    ;;
+  GenuineIntel)
+    microcode_package='intel-ucode'
+    ;;
+  *)
+    print_error 'unknown cpu vendor.\n\n'
+    return 1
+    ;;
+  esac
+
+  printf '%s' "${microcode_package}"
+}
+
+is_uefi() {
+  ls /sys/firmware/efi/efivars &>/dev/null || return 1
+}
+
+get_configure_script() {
+  printf '%s/configure.sh' "${BASH_SOURCE%/*}"
+}
+
+configure_script_exists() {
+  [[ ! -e "$(get_configure_script)" ]] || return 1
+}
+
+is_connected() {
+  ping -c 1 -W 5 archlinux.org &>/dev/null || return 1
+}
+
+is_package_available() {
+  local package="$1"
+
+  local line=''
+  while read -r line; do
+    [[ "${line}" == "${package}" ]] && return 0
+  done < <(pacman -Sqsy "^${package}\$" 2>/dev/null)
+
+  return 1
+}
+
+is_clock_synced() {
+  [[ "$(timedatectl show -P NTPSynchronized)" == 'yes' ]] || return 1
+}
+
+get_disks() {
+  local line=''
+  while read -r line; do
+    [[ "${line}" =~ ^/dev/(sd|nvme|mmcblk) ]] && printf '%s\n' "${line}"
+  done < <(lsblk --nodeps --noheadings --output PATH,MODEL)
+}
+
+is_disk_valid() {
+  local disk="$1"
+
+  local line=''
+  while read -r line; do
+    line="${line%% *}"
+    if [[ "${line,,}" == "${disk,,}" ]]; then
+      printf '%s' "${line}"
+      return 0
+    fi
+  done < <(get_disks)
+
+  return 1
+}
+
+get_countries() {
+  local countries=''
+
+  local retries=0
+  local max_retries=3
+  local interval=5
+
+  until countries=$(reflector --list-countries 2>/dev/null); do
+    ((++retries > max_retries)) && return 1
+    print_error 'failed to get countries. retrying...\n\n'
+    sleep "${interval}"
+  done
+
+  local line=''
+  local count=0
+
+  while read -r line; do
+    ((++count <= 2)) && continue
+    printf '%s\n' "${line%%  *}"
+  done <<<"${countries}"
+}
+
+is_country_valid() {
+  local country="$1"
+  local countries="$2"
+
+  local line=''
+  while read -r line; do
+    if [[ "${line,,}" == "${country,,}" ]]; then
+      printf '%s' "${line}"
+      return 0
+    fi
+  done <<<"${countries}"
+
+  return 1
+}
+
+get_time_zones() {
+  timedatectl list-timezones
+}
+
+is_time_zone_valid() {
+  local time_zone="$1"
+
+  local line=''
+  while read -r line; do
+    if [[ "${line,,}" == "${time_zone,,}" ]]; then
+      printf '%s' "${line}"
+      return 0
+    fi
+  done < <(get_time_zones)
+
+  return 1
+}
+
+get_locales() {
+  cat /usr/share/i18n/SUPPORTED
+}
+
+is_locale_valid() {
+  local locale="$1"
+
+  local line=''
+  while read -r line; do
+    if [[ "${line,,}" == "${locale,,}" ]]; then
+      printf '%s' "${line}"
+      return 0
+    fi
+  done < <(get_locales)
+
+  return 1
+}
+
+is_hostname_valid() {
+  local hostname="$1"
+  [[ "${hostname}" =~ ^[[:lower:][:digit:]-]{1,64}$ ]] || return 1
+}
+
+is_username_valid() {
+  local username="$1"
+
+  if [[ "${username}" != -* ]] &&
+    [[ "${#username}" -le 256 ]] &&
+    [[ ! "${username}" =~ ^[[:digit:]]+$ ]] &&
+    [[ "${username}" =~ ^[[:alnum:]_-]+\$?$ ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+is_password_valid() {
+  local password="$1"
+  [[ -n "${password}" ]] || return 1
+}
+
+# ------------------------------------------------------------------------------
+#       output functions
+# ------------------------------------------------------------------------------
+
+# usage: print [--color color] message
+print() {
+  local message=''
+  local color=''
+
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+    --color)
+      color="$2"
+      shift 2
+      ;;
+    *)
+      message="$1"
+      shift
+      ;;
+    esac
+  done
+
+  if [[ -n "${color}" ]]; then
+    local color_sequence="\\033[1;${COLOR_CODES[${color}]}m"
+    local reset_sequence='\033[0m'
+    printf '%b' "${color_sequence}${message}${reset_sequence}"
+  else
+    printf '%b' "${message}"
+  fi
+}
+
+print_info() {
+  local message="$1"
+  print --color green "info: ${message}"
+}
+
+print_error() {
+  local message="$1"
+  print --color red "error: ${message}" >&2
+}
+
+list_disks() {
+  local disks=''
+
+  disks="$(get_disks)"
+  [[ -z "${disks}" ]] && return 1
+
+  print --color green 'available disks: \n'
+
+  local line=''
+  while read -r line; do
+    print "  - ${line}\n"
+  done <<<"${disks}"
+  print '\n' >&2
 }
 
 # ------------------------------------------------------------------------------
@@ -586,242 +824,14 @@ generate_fstab() {
 configure_system() {
   local passed_variables=("$@")
 
-  local source_script="${BASH_SOURCE%/*}/configure.sh"
+  local source_script=''
   local script='/root/configure.sh'
+
+  source_script="$(get_configure_script)"
 
   cp --force "${source_script}" "/mnt/${script}" || return 1
   arch-chroot /mnt /bin/bash "${script}" "${passed_variables[@]}" || return 1
   rm --force "/mnt/${script}" || return 1
-}
-
-# ------------------------------------------------------------------------------
-#       check functions
-# ------------------------------------------------------------------------------
-
-is_uefi() {
-  ls /sys/firmware/efi/efivars &>/dev/null || return 1
-}
-
-is_connected() {
-  ping -c 1 -W 5 archlinux.org &>/dev/null || return 1
-}
-
-is_clock_synced() {
-  [[ "$(timedatectl show -P NTPSynchronized)" == 'yes' ]] || return 1
-}
-
-is_package_available() {
-  local package="$1"
-
-  local line=''
-  while read -r line; do
-    [[ "${line}" == "${package}" ]] && return 0
-  done < <(pacman -Sqs "^${package}\$")
-
-  return 1
-}
-
-is_disk_valid() {
-  local disk="$1"
-
-  local line=''
-  while read -r line; do
-    line="${line%% *}"
-    if [[ "${line,,}" == "${disk,,}" ]]; then
-      printf '%s' "${line}"
-      return 0
-    fi
-  done < <(get_disks)
-
-  return 1
-}
-
-is_country_valid() {
-  local country="$1"
-  local countries="$2"
-
-  local line=''
-  while read -r line; do
-    if [[ "${line,,}" == "${country,,}" ]]; then
-      printf '%s' "${line}"
-      return 0
-    fi
-  done <<<"${countries}"
-
-  return 1
-}
-
-is_time_zone_valid() {
-  local time_zone="$1"
-
-  local line=''
-  while read -r line; do
-    if [[ "${line,,}" == "${time_zone,,}" ]]; then
-      printf '%s' "${line}"
-      return 0
-    fi
-  done < <(get_time_zones)
-
-  return 1
-}
-
-is_locale_valid() {
-  local locale="$1"
-
-  local line=''
-  while read -r line; do
-    if [[ "${line,,}" == "${locale,,}" ]]; then
-      printf '%s' "${line}"
-      return 0
-    fi
-  done < <(get_locales)
-
-  return 1
-}
-
-is_hostname_valid() {
-  local hostname="$1"
-  [[ "${hostname}" =~ ^[[:lower:][:digit:]-]{1,64}$ ]] || return 1
-}
-
-is_username_valid() {
-  local username="$1"
-
-  if [[ "${username}" != -* ]] &&
-    [[ "${#username}" -le 256 ]] &&
-    [[ ! "${username}" =~ ^[[:digit:]]+$ ]] &&
-    [[ "${username}" =~ ^[[:alnum:]_-]+\$?$ ]]; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-is_password_valid() {
-  local password="$1"
-  [[ -n "${password}" ]] || return 1
-}
-
-# ------------------------------------------------------------------------------
-#       output functions
-# ------------------------------------------------------------------------------
-
-# usage: print [--color color] message
-print() {
-  local message=''
-  local color=''
-
-  while [[ "$#" -gt 0 ]]; do
-    case "$1" in
-    --color)
-      color="$2"
-      shift 2
-      ;;
-    *)
-      message="$1"
-      shift
-      ;;
-    esac
-  done
-
-  if [[ -n "${color}" ]]; then
-    local color_sequence="\\033[1;${COLOR_CODES[${color}]}m"
-    local reset_sequence='\033[0m'
-    printf '%b' "${color_sequence}${message}${reset_sequence}"
-  else
-    printf '%b' "${message}"
-  fi
-}
-
-print_info() {
-  local message="$1"
-  print --color green "info: ${message}"
-}
-
-print_error() {
-  local message="$1"
-  print --color red "error: ${message}" >&2
-}
-
-get_microcode_package() {
-  local microcode_package=''
-
-  case "$(get_vendor_id)" in
-  AuthenticAMD)
-    microcode_package='amd-ucode'
-    ;;
-  GenuineIntel)
-    microcode_package='intel-ucode'
-    ;;
-  *)
-    print_error 'unknown cpu vendor.\n\n'
-    return 1
-    ;;
-  esac
-
-  printf '%s' "${microcode_package}"
-}
-
-get_vendor_id() {
-  local line=''
-  while read -r line; do
-    if [[ "${line}" == vendor_id* ]]; then
-      printf '%s' "${line##* }"
-      return 0
-    fi
-  done </proc/cpuinfo
-}
-
-get_disks() {
-  local line=''
-  while read -r line; do
-    [[ "${line}" =~ ^/dev/(sd|nvme|mmcblk) ]] && printf '%s\n' "${line}"
-  done < <(lsblk --nodeps --noheadings --output PATH,MODEL)
-}
-
-list_disks() {
-  local disks=''
-
-  disks="$(get_disks)"
-  [[ -z "${disks}" ]] && return 1
-
-  print --color green 'available disks: \n'
-
-  local line=''
-  while read -r line; do
-    print "  - ${line}\n"
-  done <<<"${disks}"
-  print '\n' >&2
-}
-
-get_countries() {
-  local countries=''
-
-  local retries=0
-  local max_retries=3
-  local interval=5
-
-  until countries=$(reflector --list-countries 2>/dev/null); do
-    ((++retries > max_retries)) && return 1
-    print_error 'failed to get countries. retrying...\n\n'
-    sleep "${interval}"
-  done
-
-  local line=''
-  local count=0
-
-  while read -r line; do
-    ((++count <= 2)) && continue
-    printf '%s\n' "${line%%  *}"
-  done <<<"${countries}"
-}
-
-get_time_zones() {
-  timedatectl list-timezones
-}
-
-get_locales() {
-  cat /usr/share/i18n/SUPPORTED
 }
 
 main "$@"
