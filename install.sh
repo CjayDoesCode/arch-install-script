@@ -160,7 +160,7 @@ main() {
   )
 
   print --color yellow 'warning: installation will wipe target disk.\n\n'
-  confirm 'proceed with installation?' || return
+  confirm 'proceed with installation?' >/dev/null || return
 
   # ----  installation  --------------------------------------------------------
 
@@ -582,9 +582,11 @@ confirm() {
 
     case "${input,,}" in
     y | yes)
+      printf 'true'
       return 0
       ;;
     n | no)
+      printf 'false'
       return 1
       ;;
     *)
@@ -595,11 +597,11 @@ confirm() {
 }
 
 input_driver_packages() {
-  if confirm 'install amd driver packages?'; then
+  if confirm 'install amd driver packages?' >/dev/null; then
     printf '%s\n' "${AMD_DRIVER_PACKAGES[@]}"
   fi
 
-  if confirm 'install intel driver packages?'; then
+  if confirm 'install intel driver packages?' >/dev/null; then
     printf '%s\n' "${INTEL_DRIVER_PACKAGES[@]}"
   fi
 }
@@ -607,7 +609,7 @@ input_driver_packages() {
 input_optional_packages() {
   local package=''
   for package in "${OPTIONAL_PACKAGES[@]}"; do
-    confirm "install ${package}?" && printf '%s\n' "${package}"
+    confirm "install ${package}?" >/dev/null && printf '%s\n' "${package}"
   done
 }
 
