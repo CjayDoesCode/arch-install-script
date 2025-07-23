@@ -582,11 +582,9 @@ confirm() {
 
     case "${input,,}" in
     y | yes)
-      printf 'true'
       return 0
       ;;
     n | no)
-      printf 'false'
       return 1
       ;;
     *)
