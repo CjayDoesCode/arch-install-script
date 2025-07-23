@@ -54,7 +54,7 @@ main() {
   local microcode_package=''
 
   if ! microcode_package="$(get_microcode_package)"; then
-    print_error 'unknown cpu vendor.\n\n'
+    print_error 'unable to identify cpu vendor.\n\n'
     return 1
   fi
 
@@ -96,17 +96,12 @@ main() {
   # ----  checks  --------------------------------------------------------------
 
   if ! is_uefi; then
-    print_error 'system not booted in uefi mode.\n\n'
+    print_error 'system is not booted in uefi mode.\n\n'
     return 1
   fi
 
   if ! configure_script_exists; then
-    print_error "'configure.sh' not found.\n\n"
-    return 1
-  fi
-
-  if ! is_package_available "${editor_package}"; then
-    print_error "'${editor_package}' not found.\n\n"
+    print_error "unable to find configure script.\n\n"
     return 1
   fi
 
@@ -257,11 +252,15 @@ get_microcode_package() {
 }
 
 is_uefi() {
-  ls /sys/firmware/efi/efivars &>/dev/null || return 1
+  [[ -e /sys/firmware/efi/fw_platform_size ]] || return 1
 }
 
 get_configure_script() {
-  printf '%s/configure.sh' "${BASH_SOURCE%/*}"
+  if [[ "${BASH_SOURCE[0]}" == */* ]]; then
+    printf '%s/configure.sh' "${BASH_SOURCE[0]%/*}"
+  else
+    printf './configure.sh'
+  fi
 }
 
 configure_script_exists() {
@@ -274,7 +273,7 @@ is_package_available() {
   local line=''
   while read -r line; do
     [[ "${line}" == "${package}" ]] && return 0
-  done < <(pacman -Sqsy "^${package}\$" 2>/dev/null)
+  done < <(pacman -Sqsy "^${package}\$")
 
   return 1
 }
@@ -785,7 +784,7 @@ update_mirror_list() {
   local max_retries=3
   local interval=5
 
-  until reflector "${reflector_options[@]}"; do
+  until reflector "${reflector_options[@]}" 2>/dev/null; do
     ((++retries > max_retries)) && return 1
     print_error 'failed to update mirror list. retrying...\n\n'
     sleep "${interval}"
