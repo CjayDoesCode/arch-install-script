@@ -265,7 +265,7 @@ get_configure_script() {
 }
 
 configure_script_exists() {
-  [[ ! -e "$(get_configure_script)" ]] || return 1
+  [[ -e "$(get_configure_script)" ]] || return 1
 }
 
 is_package_available() {
