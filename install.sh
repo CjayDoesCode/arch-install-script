@@ -561,7 +561,7 @@ input_reflector_country() {
     country="$(scan 'enter a country (e.g., "japan"): ')"
 
     if [[ "${country}" == 'l' ]]; then
-      column <<<"${countries}" | less --clear-screen --tilde >&2
+      column <<<"${countries}" | less --tilde >&2
     else
       country="$(is_country_valid "${country}" "${countries}")" && break
       print_error 'invalid country. try again.\n\n'
@@ -623,7 +623,7 @@ input_time_zone() {
     time_zone="$(scan 'enter time zone (e.g., "asia/tokyo"): ')"
 
     if [[ "${time_zone}" == 'l' ]]; then
-      get_time_zones | column | less --clear-screen --tilde >&2
+      get_time_zones | column | less --tilde >&2
     else
       time_zone="$(is_time_zone_valid "${time_zone}")" && break
       print_error 'invalid time zone. try again.\n\n'
@@ -642,7 +642,7 @@ input_locale() {
     locale="$(scan 'enter locale (e.g., "en_us.utf-8 utf-8"): ')"
 
     if [[ "${locale}" == 'l' ]]; then
-      get_locales | column | less --clear-screen --tilde >&2
+      get_locales | column | less --tilde >&2
     else
       locale="$(is_locale_valid "${locale}")" && break
       print_error 'invalid locale. try again.\n\n'
@@ -739,7 +739,7 @@ sync_clock() {
 partition_disk() {
   local disk="$1"
 
-  local layout='size=1GiB, type=uefi\n, type=linux\n'
+  local layout='size=1GiB, type=uefi\n type=linux\n'
   local sfdisk_options=(
     '--label' 'gpt'
     '--wipe' 'always'
