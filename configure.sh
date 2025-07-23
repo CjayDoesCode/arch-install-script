@@ -38,7 +38,10 @@ main() {
   local root_partition="$7"
   local root_partition_uuid=''
 
-  root_partition_uuid="$(get_root_partition_uuid)"
+  if ! root_partition_uuid="$(get_root_partition_uuid)"; then
+    print_error 'failed to get root partition uuid.\n\n'
+    return 1
+  fi
 
   local kernel_parameters=(
     "root=UUID=${root_partition_uuid}"
@@ -164,6 +167,55 @@ main() {
 }
 
 # ------------------------------------------------------------------------------
+#       helper functions
+# ------------------------------------------------------------------------------
+
+get_root_partition_uuid() {
+  lsblk --noheadings --output UUID "${root_partition}" || return 1
+}
+
+# ------------------------------------------------------------------------------
+#       output functions
+# ------------------------------------------------------------------------------
+
+# usage: print [--color color] message
+print() {
+  local message=''
+  local color=''
+
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+    --color)
+      color="$2"
+      shift 2
+      ;;
+    *)
+      message="$1"
+      shift
+      ;;
+    esac
+  done
+
+  if [[ -n "${color}" ]]; then
+    local color_sequence="\\033[1;${COLOR_CODES[${color}]}m"
+    local reset_sequence='\033[0m'
+    printf '%b' "${color_sequence}${message}${reset_sequence}"
+  else
+    printf '%b' "${message}"
+  fi
+}
+
+print_info() {
+  local message="$1"
+  print --color cyan "info: ${message}"
+}
+
+print_error() {
+  local message="$1"
+  print --color red "error: ${message}" >&2
+}
+
+# ------------------------------------------------------------------------------
 #       configuration functions
 # ------------------------------------------------------------------------------
 
@@ -279,51 +331,6 @@ set_up_reflector() {
 
 enable_paccache_timer() {
   systemctl enable paccache.timer || return 1
-}
-
-# ------------------------------------------------------------------------------
-#       output functions
-# ------------------------------------------------------------------------------
-
-# usage: print [--color color] message
-print() {
-  local message=''
-  local color=''
-
-  while [[ "$#" -gt 0 ]]; do
-    case "$1" in
-    --color)
-      color="$2"
-      shift 2
-      ;;
-    *)
-      message="$1"
-      shift
-      ;;
-    esac
-  done
-
-  if [[ -n "${color}" ]]; then
-    local color_sequence="\\033[1;${COLOR_CODES[${color}]}m"
-    local reset_sequence='\033[0m'
-    printf '%b' "${color_sequence}${message}${reset_sequence}"
-  else
-    printf '%b' "${message}"
-  fi
-}
-
-print_info() {
-  local message="$1"
-  print --color cyan "info: ${message}"
-}
-
-print_error() {
-  local message="$1"
-  print --color red "error: ${message}" >&2
-}
-
-get_root_partition_uuid() {
-  lsblk --noheadings --output UUID "${root_partition}"
 }
 
 main "$@"
