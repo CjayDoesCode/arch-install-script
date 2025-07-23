@@ -500,7 +500,7 @@ input_target_disk() {
   print --color green "enter 'l' to list disks.\n\n" >&2
 
   while true; do
-    target_disk="$(scan 'enter target disk (e.g., "/dev/sda"): ')"
+    target_disk="$(scan 'enter target disk (e.g., "/dev/nvme0n1"): ')"
 
     if [[ "${target_disk}" == 'l' ]]; then
       list_disks >&2 || print_error 'no available disks found.\n\n'
