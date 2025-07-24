@@ -508,7 +508,7 @@ input_target_disk() {
   print --color green "enter 'l' to list disks.\n\n" >&2
 
   while true; do
-    target_disk="$(scan 'enter target disk (e.g., "/dev/nvme0n1"): ')"
+    target_disk="$(scan 'enter target disk (e.g., /dev/nvme0n1): ')"
 
     if [[ "${target_disk}" == 'l' ]]; then
       list_disks >&2 || print_error 'no available disks found.\n\n'
@@ -528,7 +528,7 @@ input_swap_size() {
   local suffix=''
 
   while true; do
-    swap_size="$(scan 'enter swap size (e.g., "8g"): ')"
+    swap_size="$(scan 'enter swap size (e.g., 8g): ')"
 
     number="${swap_size%%[^[:digit:]]*}"
     suffix="${swap_size##*[[:digit:]]}"
@@ -566,7 +566,7 @@ input_reflector_country() {
   print --color green "enter 'q' to return.\n\n" >&2
 
   while true; do
-    country="$(scan 'enter a country (e.g., "japan"): ')"
+    country="$(scan 'enter a country (e.g., japan): ')"
 
     if [[ "${country}" == 'l' ]]; then
       column <<<"${countries}" | less --tilde >&2
