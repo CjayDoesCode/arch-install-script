@@ -790,7 +790,6 @@ mount_file_systems() {
 
 create_swap() {
   local swap_size="$1"
-
   local mkswap_options=(
     '--file' '/mnt/swapfile'
     '--size' "${swap_size}"
