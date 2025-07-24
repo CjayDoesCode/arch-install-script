@@ -1,12 +1,8 @@
-# Arch Linux Install Script
+# Arch Linux Install Scripts
 
-Bash script for automating the installation of a base Arch Linux system from the live environment.
+Bash scripts for automating the installation of a base Arch Linux system from the live environment.
 The process roughly follows the procedures outlined in the [ArchWiki Installation Guide](https://wiki.archlinux.org/title/Installation_guide).
-The purpose of this script is to automate the installation of a base Arch Linux system as a foundation for a desktop environment, window manager, or compositor.
-
-> [!WARNING]
-> This script only supports x86_64 (AMD64) systems with AMD or Intel CPUs.
-> You will be prompted to select appropriate video drivers (AMD, Intel, or both) during installation.
+The purpose of these scripts are to automate the installation of a base Arch Linux system as a foundation for a desktop environment, window manager, or compositor.
 
 > [!NOTE]
 > **This script is not meant to substitute learning the manual installation process yourself.**
@@ -20,17 +16,22 @@ The purpose of this script is to automate the installation of a base Arch Linux 
 
 ## Usage
 
-1. Download the script.
+1. Download and extract the archive.
 ```bash
-curl -o install.sh https://raw.githubusercontent.com/CjayDoesCode/arch-install-script/main/install.sh
+curl -L https://api.github.com/repos/CjayDoesCode/arch-install-scripts/tarball/main | tar -xz
 ```
 
-2. Grant execute permission.
+2. Navigate into the project directory.
+```bash
+cd CjayDoesCode-arch-install-scripts-*
+```
+
+2. Make the script executable.
 ```bash
 chmod +x install.sh
 ```
 
-3. Run the script.
+3. Run the installer.
 ```bash
 ./install.sh
 ```
