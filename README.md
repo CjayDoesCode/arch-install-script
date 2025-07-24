@@ -47,5 +47,5 @@ chmod +x install.sh
 | pipewire_packages           | pipewire, pipewire-alsa, pipewire-audio, pipewire-jack, pipewire-pulse, wireplumber                                                                           |
 | optional_packages           | base-devel, git, openssh, sof-firmware                                                                                                                        |
 
-Either `intel-ucode` or `amd-ucode` is installed, depending on the processor.
-You can replace `nano` with the `--editor` option (e.g., `./install.sh --editor helix`).
+Depending on the processor, either intel-ucode or amd-ucode is installed.<br/>
+You can replace nano with the --editor option (e.g., `./install.sh --editor helix`).
