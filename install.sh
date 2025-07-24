@@ -460,18 +460,19 @@ print_error() {
 }
 
 list_disks() {
-  local disks=''
+  local disks=()
 
-  disks="$(get_disks)"
-  [[ -z "${disks}" ]] && return 1
+  mapfile -t disks < <(get_disks)
+
+  [[ "${#disks[@]}" -eq 0 ]] && return 1
 
   print --color green 'available disks: \n'
 
-  local line=''
-  while read -r line; do
-    print "  - ${line}\n"
-  done <<<"${disks}"
-  print '\n' >&2
+  local disk=''
+  for disk in "${disks[@]}"; do
+    print "  - ${disk}\n"
+  done
+  print '\n'
 }
 
 # ------------------------------------------------------------------------------
