@@ -284,7 +284,7 @@ set_root_password() {
 }
 
 configure_sudo() {
-  printf '%%wheel ALL=(ALL) ALL\n' >/etc/sudoers.d/wheel || return 1
+  printf '%%wheel ALL=(ALL:ALL) ALL\n' >/etc/sudoers.d/wheel || return 1
   chmod 0440 /etc/sudoers.d/wheel || return 1
 }
 
