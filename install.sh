@@ -464,13 +464,11 @@ print_error() {
 
 list_disks() {
   local disks=()
-
+  
   mapfile -t disks < <(get_disks)
-
   [[ "${#disks[@]}" -eq 0 ]] && return 1
 
   print --color green 'available disks: \n'
-
   local disk=''
   for disk in "${disks[@]}"; do
     print "  - ${disk}\n"
@@ -784,7 +782,7 @@ partition_disk() {
     '--wipe-partitions' 'always'
   )
 
-  printf "${layout}" | sfdisk "${sfdisk_options[@]}" "${disk}" || return 1
+  printf '%s' "${layout}" | sfdisk "${sfdisk_options[@]}" "${disk}" || return 1
 }
 
 format_partitions() {
