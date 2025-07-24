@@ -721,6 +721,7 @@ input_user_password() {
 
     if ! is_password_valid "${user_password}"; then
       print_error 'invalid password. try again.\n\n'
+      continue
     fi
 
     reentered_password="$(scan --password 'reenter user password: ')"
@@ -740,6 +741,7 @@ input_root_password() {
 
     if ! is_password_valid "${root_password}"; then
       print_error 'invalid password. try again.\n\n'
+      continue
     fi
 
     reentered_password="$(scan --password 'reenter root password: ')"
