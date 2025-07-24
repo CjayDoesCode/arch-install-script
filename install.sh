@@ -239,11 +239,15 @@ is_uefi() {
 }
 
 get_configure_script() {
+  local configure_script=''
+
   if [[ "${BASH_SOURCE[0]}" == */* ]]; then
-    printf '%s/configure.sh' "${BASH_SOURCE[0]%/*}"
+    config_directory="${BASH_SOURCE[0]%/*}/configure.sh"
   else
-    printf './configure.sh'
+    config_directory='./configure.sh'
   fi
+
+  printf '%s' "${configure_script}"
 }
 
 configure_script_exists() {
@@ -292,10 +296,14 @@ is_clock_synced() {
 }
 
 get_disks() {
+  local disks=()
+
   local line=''
   while read -r line; do
-    [[ "${line}" =~ ^/dev/(sd|nvme|mmcblk) ]] && printf '%s\n' "${line}"
+    [[ "${line}" =~ ^/dev/(sd|nvme|mmcblk) ]] && disks+=("${line}")
   done < <(lsblk --nodeps --noheadings --output PATH,MODEL)
+
+  printf "%s\n" "${disks[@]}"
 }
 
 is_disk_valid() {
