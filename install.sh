@@ -102,7 +102,7 @@ main() {
   fi
 
   if ! configure_script_exists; then
-    print_error "unable to find configure script.\n\n"
+    print_error 'unable to find configure script.\n\n'
     return 1
   fi
 
