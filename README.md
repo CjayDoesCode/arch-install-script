@@ -38,7 +38,7 @@ chmod +x install.sh
 
 ## Installed Packages
 
-| package group               | packages                                                                                                                                                      |
+| Package Group               | Packages                                                                                                                                                      |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | base_system_packages        | amd-ucode\|intel-ucode, base, bash, bash-completion, linux, linux-firmware, man-db, man-pages, networkmanager, nano, pacman-contrib, reflector, sudo, texinfo |
 | filesystem_utility_packages | dosfstools, e2fsprogs, exfatprogs, ntfs-3g                                                                                                                    |
