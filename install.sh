@@ -229,10 +229,6 @@ get_microcode_package() {
   GenuineIntel)
     microcode_package='intel-ucode'
     ;;
-  *)
-    print_error 'unknown cpu vendor.\n\n'
-    return 1
-    ;;
   esac
 
   printf '%s' "${microcode_package}"
