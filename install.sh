@@ -643,7 +643,7 @@ input_time_zone() {
   print --color green "enter 'q' to return.\n\n" >&2
 
   while true; do
-    time_zone="$(scan 'enter time zone (e.g., "asia/tokyo"): ')"
+    time_zone="$(scan 'enter time zone (e.g., asia/tokyo): ')"
 
     if [[ "${time_zone}" == 'l' ]]; then
       get_time_zones | column | less --tilde >&2
@@ -662,7 +662,7 @@ input_locale() {
   print --color green "enter 'l' to list locales. enter 'q' to return.\n\n" >&2
 
   while true; do
-    locale="$(scan 'enter locale (e.g., "en_us.utf-8 utf-8"): ')"
+    locale="$(scan 'enter locale (e.g., en_us.utf-8 utf-8): ')"
 
     if [[ "${locale}" == 'l' ]]; then
       get_locales | column | less --tilde >&2
