@@ -326,6 +326,7 @@ set_up_reflector() {
   local config='/etc/xdg/reflector/reflector.conf'
 
   printf "%s\n" "${reflector_options[*]}" >"${config}" || return 1
+  systemctl start reflector.service || return 1
   systemctl enable reflector.timer || return 1
 }
 
