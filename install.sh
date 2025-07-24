@@ -610,20 +610,30 @@ confirm() {
 }
 
 input_driver_packages() {
+  local driver_packages=()
+
   if confirm 'install amd driver packages?' >/dev/null; then
-    printf '%s\n' "${AMD_DRIVER_PACKAGES[@]}"
+    driver_packages+=("${AMD_DRIVER_PACKAGES[@]}")
   fi
 
   if confirm 'install intel driver packages?' >/dev/null; then
-    printf '%s\n' "${INTEL_DRIVER_PACKAGES[@]}"
+    driver_packages+=("${INTEL_DRIVER_PACKAGES[@]}")
   fi
+
+  printf '%s\n' "${driver_packages[@]}"
 }
 
 input_optional_packages() {
+  local optional_packages=()
+
   local package=''
   for package in "${OPTIONAL_PACKAGES[@]}"; do
-    confirm "install ${package}?" >/dev/null && printf '%s\n' "${package}"
+    if confirm "install ${package}?" >/dev/null; then
+      optional_packages+=("${package}")
+    fi
   done
+
+  printf '%s\n' "${optional_packages[@]}"
 }
 
 input_time_zone() {
