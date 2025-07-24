@@ -67,7 +67,8 @@ main() {
       shift 2
       ;;
     *)
-      shift
+      print_error 'invalid option.\n\n'
+      return 1
       ;;
     esac
   done
