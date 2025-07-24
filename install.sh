@@ -308,16 +308,19 @@ get_disks() {
 }
 
 is_disk_valid() {
-  local disk="$1"
+  local target_disk="$1"
+  local disks=()
 
-  local line=''
-  while read -r line; do
-    line="${line%% *}"
-    if [[ "${line,,}" == "${disk,,}" ]]; then
-      printf '%s' "${line}"
+  mapfile -t disks < <(get_disks)
+
+  local disk=''
+  for disk in "${disks[@]}"; do
+    disk="${disk%% *}"
+    if [[ "${disk,,}" == "${target_disk,,}" ]]; then
+      printf '%s' "${disk}"
       return 0
     fi
-  done < <(get_disks)
+  done
 
   return 1
 }
