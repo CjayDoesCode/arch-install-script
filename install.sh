@@ -464,7 +464,7 @@ print_error() {
 
 list_disks() {
   local disks=()
-  
+
   mapfile -t disks < <(get_disks)
   [[ "${#disks[@]}" -eq 0 ]] && return 1
 
