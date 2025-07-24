@@ -64,8 +64,13 @@ main() {
   while [[ "$#" -gt 0 ]]; do
     case "$1" in
     --editor)
-      editor_package="$2"
-      shift 2
+      if [[ -n "$2" ]]; then
+        editor_package="$2"
+        shift 2
+      else
+        print_error "missing argument.\n\n"
+        return 1
+      fi
       ;;
     *)
       print_error 'invalid option.\n\n'
