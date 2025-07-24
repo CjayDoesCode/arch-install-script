@@ -242,9 +242,9 @@ get_configure_script() {
   local configure_script=''
 
   if [[ "${BASH_SOURCE[0]}" == */* ]]; then
-    config_directory="${BASH_SOURCE[0]%/*}/configure.sh"
+    configure_script="${BASH_SOURCE[0]%/*}/configure.sh"
   else
-    config_directory='./configure.sh'
+    configure_script='./configure.sh'
   fi
 
   printf '%s' "${configure_script}"
