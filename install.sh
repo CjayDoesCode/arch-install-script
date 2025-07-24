@@ -787,7 +787,7 @@ partition_disk() {
     '--wipe-partitions' 'always'
   )
 
-  printf '%s' "${layout}" | sfdisk "${sfdisk_options[@]}" "${disk}" || return 1
+  printf '%b' "${layout}" | sfdisk "${sfdisk_options[@]}" "${disk}" || return 1
 }
 
 format_partitions() {
