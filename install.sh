@@ -109,22 +109,8 @@ main() {
   # ----  input  ---------------------------------------------------------------
 
   target_disk="$(input_target_disk)"
-
-  case "${target_disk}" in
-  /dev/sd*)
-    root_partition="${target_disk}2"
-    boot_partition="${target_disk}1"
-    ;;
-  /dev/nvme*)
-    root_partition="${target_disk}p2"
-    boot_partition="${target_disk}p1"
-    ;;
-  /dev/mmcblk*)
-    root_partition="${target_disk}p2"
-    boot_partition="${target_disk}p1"
-    ;;
-  esac
-
+  root_partition="$(get_root_partition "${target_disk}")"
+  boot_partition="$(get_boot_partition "${target_disk}")"
   swap_size="$(input_swap_size)"
 
   reflector_country="$(input_reflector_country)" || return 1
@@ -266,6 +252,44 @@ get_configure_script() {
 
 configure_script_exists() {
   [[ -e "$(get_configure_script)" ]] || return 1
+}
+
+get_root_partition() {
+  local disk="$1"
+  local root_partition=''
+
+  case "${disk}" in
+  /dev/sd*)
+    root_partition="${target_disk}2"
+    ;;
+  /dev/nvme*)
+    root_partition="${target_disk}p2"
+    ;;
+  /dev/mmcblk*)
+    root_partition="${target_disk}p2"
+    ;;
+  esac
+
+  printf '%s' "${root_partition}"
+}
+
+get_boot_partition() {
+  local disk="$1"
+  local boot_partition=''
+
+  case "${disk}" in
+  /dev/sd*)
+    boot_partition="${target_disk}1"
+    ;;
+  /dev/nvme*)
+    boot_partition="${target_disk}p1"
+    ;;
+  /dev/mmcblk*)
+    boot_partition="${target_disk}p1"
+    ;;
+  esac
+
+  printf '%s' "${boot_partition}"
 }
 
 is_clock_synced() {
