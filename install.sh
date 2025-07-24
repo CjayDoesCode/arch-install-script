@@ -256,6 +256,7 @@ configure_script_exists() {
 
 get_partitions() {
   local disk="$1"
+
   local root_partition=''
   local boot_partition=''
 
@@ -798,6 +799,7 @@ mount_file_systems() {
 
 create_swap() {
   local swap_size="$1"
+
   local mkswap_options=(
     '--file' '/mnt/swapfile'
     '--size' "${swap_size}"
