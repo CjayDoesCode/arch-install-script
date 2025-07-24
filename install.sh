@@ -206,13 +206,17 @@ main() {
 # ------------------------------------------------------------------------------
 
 get_vendor_id() {
+  local vendor_id=''
+
   local line=''
   while read -r line; do
     if [[ "${line}" == vendor_id* ]]; then
-      printf '%s' "${line##* }"
-      return 0
+      vendor_id="${line##* }"
+      break
     fi
   done </proc/cpuinfo
+
+  printf '%s' "${vendor_id}"
 }
 
 get_microcode_package() {
