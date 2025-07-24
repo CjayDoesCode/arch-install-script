@@ -110,24 +110,18 @@ main() {
   # ----  input  ---------------------------------------------------------------
 
   target_disk="$(input_target_disk)"
-  readarray -t partitions < <(get_partitions "${target_disk}")
+  mapfile -t partitions < <(get_partitions "${target_disk}")
   root_partition="${partitions[0]}"
   boot_partition="${partitions[1]}"
   swap_size="$(input_swap_size)"
 
   reflector_country="$(input_reflector_country)" || return 1
-  reflector_options=(
-    '--save' '/etc/pacman.d/mirrorlist'
-    '--sort' 'age'
-    '--latest' '5'
-    '--protocol' 'https'
-    '--country' "${reflector_country}"
-  )
+  mapfile -t reflector_options < <(get_reflector_options "${reflector_country}")
 
-  readarray -t driver_packages < <(input_driver_packages)
+  mapfile -t driver_packages < <(input_driver_packages)
   system_packages+=("${driver_packages[@]}")
 
-  readarray -t optional_packages < <(input_optional_packages)
+  mapfile -t optional_packages < <(input_optional_packages)
   system_packages+=("${optional_packages[@]}")
 
   time_zone="$(input_time_zone)"
@@ -277,6 +271,20 @@ get_partitions() {
   esac
 
   printf '%s\n' "${root_partition}" "${boot_partition}"
+}
+
+get_reflector_options() {
+  local reflector_country="$1"
+
+  local reflector_options=(
+    '--save' '/etc/pacman.d/mirrorlist'
+    '--sort' 'age'
+    '--latest' '5'
+    '--protocol' 'https'
+    '--country' "${reflector_country}"
+  )
+
+  printf '%s\n' "${reflector_options[@]}"
 }
 
 is_clock_synced() {
