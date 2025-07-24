@@ -26,12 +26,12 @@ curl -L https://api.github.com/repos/CjayDoesCode/arch-install-scripts/tarball/m
 cd CjayDoesCode-arch-install-scripts-*
 ```
 
-2. Make the installer script executable.
+3. Make the installer script executable.
 ```bash
 chmod +x install.sh
 ```
 
-3. Run the installer.
+4. Run the installer.
 ```bash
 ./install.sh
 ```
