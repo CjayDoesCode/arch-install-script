@@ -268,17 +268,6 @@ configure_script_exists() {
   [[ -e "$(get_configure_script)" ]] || return 1
 }
 
-is_package_available() {
-  local package="$1"
-
-  local line=''
-  while read -r line; do
-    [[ "${line}" == "${package}" ]] && return 0
-  done < <(pacman -Sqsy "^${package}\$")
-
-  return 1
-}
-
 is_clock_synced() {
   [[ "$(timedatectl show -P NTPSynchronized)" == 'yes' ]] || return 1
 }
