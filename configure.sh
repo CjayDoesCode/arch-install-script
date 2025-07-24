@@ -234,7 +234,7 @@ set_hardware_clock() {
 
 set_up_time_synchronization() {
   local config_directory='/etc/systemd/timesyncd.conf.d'
-  local config="${config_directory}/ntp.org"
+  local config="${config_directory}/ntp.conf"
 
   mkdir --parents "${config_directory}" || return 1
   printf '[Time]\nNTP=%s\n' "${NTP_SERVERS[*]}" >"${config}" || return 1
