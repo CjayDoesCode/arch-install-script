@@ -38,7 +38,7 @@ main() {
   local root_partition="$7"
   local root_partition_uuid=''
 
-  if ! root_partition_uuid="$(get_root_partition_uuid)"; then
+  if ! root_partition_uuid="$(get_partition_uuid "${root_partition}")"; then
     print_error 'failed to get root partition uuid.\n\n'
     return 1
   fi
@@ -170,8 +170,9 @@ main() {
 #       helper functions
 # ------------------------------------------------------------------------------
 
-get_root_partition_uuid() {
-  lsblk --noheadings --output UUID "${root_partition}" || return 1
+get_partition_uuid() {
+  local partition="$1"
+  lsblk --noheadings --output UUID "${partition}" || return 1
 }
 
 # ------------------------------------------------------------------------------
