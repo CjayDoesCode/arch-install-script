@@ -105,15 +105,15 @@ main() {
     return 1
   fi
 
-  print_info 'regenerating initramfs image...\n\n'
-  if ! regenerate_initramfs_image; then
-    print_error 'failed to regenerate initramfs image.\n\n'
-    return 1
-  fi
-
   print_info 'configuring mkinitcpio...\n\n'
   if ! configure_mkinitcpio; then
     print_error 'failed to configure mkinitcpio.\n\n'
+    return 1
+  fi
+
+  print_info 'regenerating initramfs image...\n\n'
+  if ! regenerate_initramfs_image; then
+    print_error 'failed to regenerate initramfs image.\n\n'
     return 1
   fi
 
