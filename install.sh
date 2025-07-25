@@ -267,16 +267,16 @@ get_partitions() {
 
   case "${disk}" in
   /dev/sd*)
-    root_partition="${target_disk}2"
-    boot_partition="${target_disk}1"
+    root_partition="${disk}2"
+    boot_partition="${disk}1"
     ;;
   /dev/nvme*)
-    root_partition="${target_disk}p2"
-    boot_partition="${target_disk}p1"
+    root_partition="${disk}p2"
+    boot_partition="${disk}p1"
     ;;
   /dev/mmcblk*)
-    root_partition="${target_disk}p2"
-    boot_partition="${target_disk}p1"
+    root_partition="${disk}p2"
+    boot_partition="${disk}p1"
     ;;
   esac
 
