@@ -106,7 +106,7 @@ main() {
   fi
 
   print_info 'regenerating initramfs image...\n\n'
-  if ! regenerating_initramfs_image; then
+  if ! regenerate_initramfs_image; then
     print_error 'failed to regenerate initramfs image.\n\n'
     return 1
   fi
@@ -266,7 +266,7 @@ configure_mkinitcpio() {
   printf 'HOOKS=(%s)\n' "${MKINITCPIO_HOOKS[*]}" >"${config}" || return 1
 }
 
-regenerating_initramfs_image() {
+regenerate_initramfs_image() {
   mkinitcpio --allpresets || return 1
 }
 
