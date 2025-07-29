@@ -38,14 +38,14 @@ chmod +x install.sh
 
 ## Installed Packages
 
-| Package Group               | Packages                                                                                                                                                      |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| base_system_packages        | amd-ucode\|intel-ucode, base, bash, bash-completion, linux, linux-firmware, man-db, man-pages, networkmanager, nano, pacman-contrib, reflector, sudo, texinfo |
-| filesystem_utility_packages | dosfstools, e2fsprogs, exfatprogs, ntfs-3g                                                                                                                    |
-| amd_driver_packages         | mesa, vulkan-radeon, xorg-server                                                                                                                              |
-| intel_driver_packages       | mesa, vulkan-intel, xorg-server                                                                                                                               |
-| pipewire_packages           | pipewire, pipewire-alsa, pipewire-audio, pipewire-jack, pipewire-pulse, wireplumber                                                                           |
-| optional_packages           | base-devel, git, openssh, sof-firmware                                                                                                                        |
+| Package Group               | Packages                                                                                                                                                              |
+| :---                        | :---                                                                                                                                                                  |
+| base_system_packages        | amd-ucode\|intel-ucode[^1], base, bash, bash-completion, linux, linux-firmware, man-db, man-pages, networkmanager, nano[^2], pacman-contrib, reflector, sudo, texinfo |
+| filesystem_utility_packages | dosfstools, e2fsprogs, exfatprogs, ntfs-3g                                                                                                                            |
+| amd_driver_packages         | mesa, vulkan-radeon, xorg-server                                                                                                                                      |
+| intel_driver_packages       | mesa, vulkan-intel, xorg-server                                                                                                                                       |
+| pipewire_packages           | pipewire, pipewire-alsa, pipewire-audio, pipewire-jack, pipewire-pulse, wireplumber                                                                                   |
+| optional_packages           | base-devel, git, openssh, sof-firmware                                                                                                                                |
 
-Depending on the processor, either intel-ucode or amd-ucode is installed.<br/>
-You can replace nano with the --editor option (e.g., `./install.sh --editor helix`).
+[^1]: Depending on the processor, either intel-ucode or amd-ucode is installed.
+[^2]: You can replace nano with the --editor option (e.g., `./install.sh --editor helix`).
